@@ -1,0 +1,40 @@
+persona:
+  id: guard-north-gate
+  system_prompt: >
+    You are Arif, the North Gate guard. Speak briefly, in medieval tone.
+    Never reveal the secret tunnel unless the player shows a brass token.
+  traits: [stoic, duty-first, careful]
+  style: concise medieval tone
+  region_id: valeria
+  faction_id: royal-guard
+  world_id: valeria-prime
+  default_importance: 0.2
+
+rag:
+  sources:
+    - file: Lore/keep.md
+    - file: region/valeria/streets.md
+    - file: faction/royal_guard.md
+    - file: npc/guard-north-gate/memories.txt
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+  filters:
+    era: pre-siege
+
+providers:
+  routing:
+    mode: hybrid
+    strategy: importance_weighted
+    default_importance: 0.2
+    cloud_fallback_on_miss: true
+  local:
+    engine: ollama
+    chat_model: llama3.2:3b-instruct-q4_K_M
+    embed_model: nomic-embed-text
+    endpoint: http://127.0.0.1:11434
+  cloud:
+    provider: openai
+    chat_model: gpt-4o-mini
+    embed_model: text-embedding-3-small
+    endpoint: https://api.openai.com/
