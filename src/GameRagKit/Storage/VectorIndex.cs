@@ -7,7 +7,7 @@ public sealed class VectorIndex
 {
     private readonly ConcurrentDictionary<string, VectorChunk> _chunks = new();
 
-    public IReadOnlyCollection<VectorChunk> Chunks => _chunks.Values;
+    public IEnumerable<VectorChunk> Chunks => _chunks.Values;
 
     public void Upsert(VectorChunk chunk)
     {

@@ -1,0 +1,223 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GameRAGKit API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/ask": {
+      "post": {
+        "summary": "Ask an NPC",
+        "operationId": "ask",
+        "parameters": [
+          {
+            "name": "X-GameRAG-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "enum": ["1"] }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AskRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Answer payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AskResponse" }
+              }
+            }
+          },
+          "400": { "description": "Missing protocol header" },
+          "404": { "description": "NPC not found" }
+        }
+      }
+    },
+    "/ask/stream": {
+      "post": {
+        "summary": "Ask an NPC with SSE streaming",
+        "operationId": "askStream",
+        "parameters": [
+          {
+            "name": "X-GameRAG-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "enum": ["1"] }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AskRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server Sent Events stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Each line is emitted as `data: <token>\\n\\n`."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ingest": {
+      "post": {
+        "summary": "Hot-ingest a snippet for an NPC",
+        "operationId": "ingest",
+        "parameters": [
+          {
+            "name": "X-GameRAG-Protocol",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "enum": ["1"] }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Api-Key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IngestRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ingested chunk identifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "added": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health probe",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AskRequest": {
+        "type": "object",
+        "required": ["npc", "question"],
+        "properties": {
+          "npc": { "type": "string" },
+          "question": { "type": "string" },
+          "options": { "$ref": "#/components/schemas/AskOptions" }
+        }
+      },
+      "AskOptions": {
+        "type": "object",
+        "properties": {
+          "topK": { "type": "integer", "minimum": 1, "default": 4 },
+          "inCharacter": { "type": "boolean", "default": true },
+          "systemOverride": { "type": "string" },
+          "importance": { "type": "number", "format": "double", "default": 0.2 },
+          "forceLocal": { "type": "boolean" },
+          "forceCloud": { "type": "boolean" }
+        }
+      },
+      "AskResponse": {
+        "type": "object",
+        "properties": {
+          "answer": { "type": "string" },
+          "sources": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "scores": {
+            "type": "array",
+            "items": { "type": "number", "format": "double" }
+          },
+          "fromCloud": { "type": "boolean" }
+        }
+      },
+      "IngestRequest": {
+        "type": "object",
+        "required": ["npc", "text"],
+        "properties": {
+          "npc": { "type": "string" },
+          "text": { "type": "string" },
+          "tags": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
