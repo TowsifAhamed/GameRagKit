@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace GameRagKit.Storage;
 
@@ -54,26 +55,18 @@ public sealed class VectorIndexRepository
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        var lines = await File.ReadAllLinesAsync(path, cancellationToken);
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var line in lines)
-        {
-            var parts = line.Split('|', 2);
-            if (parts.Length == 2)
-            {
-                dict[parts[0]] = parts[1];
-            }
-        }
-
-        return dict;
+        await using var stream = File.OpenRead(path);
+        var manifest = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(stream, cancellationToken: cancellationToken)
+                        ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        return new Dictionary<string, string>(manifest, StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task SaveManifestAsync(string personaId, Dictionary<string, string> manifest, CancellationToken cancellationToken)
     {
         var path = GetManifestPath(personaId);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var lines = manifest.Select(kvp => $"{kvp.Key}|{kvp.Value}");
-        await File.WriteAllLinesAsync(path, lines, cancellationToken);
+        await using var stream = File.Create(path);
+        await JsonSerializer.SerializeAsync(stream, manifest, cancellationToken: cancellationToken);
     }
 
     public static string ComputeHash(string value)
@@ -92,6 +85,6 @@ public sealed class VectorIndexRepository
 
     private string GetManifestPath(string personaId)
     {
-        return Path.Combine(_root, "manifests", personaId + ".txt");
+        return Path.Combine(_root, "manifests", personaId + ".json");
     }
 }

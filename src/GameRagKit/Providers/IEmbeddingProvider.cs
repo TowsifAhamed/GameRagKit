@@ -1,6 +1,9 @@
 namespace GameRagKit.Providers;
 
-public interface IEmbeddingProvider
+public interface IEmbeddingProvider : IEmbedder
 {
-    Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken);
+    new Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken);
+
+    Task<float[]> IEmbedder.EmbedAsync(string text, CancellationToken ct)
+        => EmbedAsync(text, ct);
 }

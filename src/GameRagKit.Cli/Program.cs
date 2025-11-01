@@ -1,17 +1,22 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Collections.Generic;
 using GameRagKit;
+using GameRagKit.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var root = new RootCommand("GameRAGKit command-line tools");
 
+var ingestConfigArgument = new Argument<DirectoryInfo>("config", description: "Folder containing NPC YAML configs");
+var ingestCleanOption = new Option<bool>("--clean", "Force a rebuild by clearing manifests");
 var ingestCommand = new Command("ingest", "Build or rebuild indexes for a folder of NPC configs")
 {
-    new Argument<DirectoryInfo>("config", description: "Folder containing NPC YAML configs"),
-    new Option<bool>("--clean", "Force a rebuild by clearing manifests")
+    ingestConfigArgument,
+    ingestCleanOption
 };
 ingestCommand.SetHandler(async (DirectoryInfo configDir, bool clean) =>
 {
@@ -34,18 +39,20 @@ ingestCommand.SetHandler(async (DirectoryInfo configDir, bool clean) =>
     foreach (var file in yamlFiles)
     {
         Console.WriteLine($"Ingesting {file.FullName}...");
-        var agent = await GameRAGKit.Load(file.FullName);
+        await using var agent = await GameRAGKit.Load(file.FullName);
         agent.UseEnv();
         await agent.EnsureIndexAsync();
     }
 
     Console.WriteLine("Ingestion complete.");
-}, ingestCommand.Arguments[0], ingestCommand.Options[0]);
+}, ingestConfigArgument, ingestCleanOption);
 
+var npcOption = new Option<FileInfo>("--npc", description: "Path to NPC YAML file") { IsRequired = true };
+var questionOption = new Option<string?>("--question", description: "Optional question to ask");
 var chatCommand = new Command("chat", "Chat with an NPC via the console")
 {
-    new Option<FileInfo>("--npc", description: "Path to NPC YAML file") { IsRequired = true },
-    new Option<string?>("--question", description: "Optional question to ask")
+    npcOption,
+    questionOption
 };
 chatCommand.SetHandler(async (FileInfo configFile, string? question) =>
 {
@@ -55,7 +62,7 @@ chatCommand.SetHandler(async (FileInfo configFile, string? question) =>
         return;
     }
 
-    var agent = await GameRAGKit.Load(configFile.FullName);
+    await using var agent = await GameRAGKit.Load(configFile.FullName);
     agent.UseEnv();
     await agent.EnsureIndexAsync();
 
@@ -79,12 +86,15 @@ chatCommand.SetHandler(async (FileInfo configFile, string? question) =>
         var reply = await agent.AskAsync(line);
         Console.WriteLine(reply.Text);
     }
-}, chatCommand.Options[0], chatCommand.Options[1]);
+}, npcOption, questionOption);
 
+var serveConfigOption = new Option<DirectoryInfo>("--config", description: "Directory containing NPC YAML configs")
+{ IsRequired = true };
+var servePortOption = new Option<int>("--port", () => 5280, "Port to listen on");
 var serveCommand = new Command("serve", "Host GameRAGKit as a lightweight HTTP service")
 {
-    new Option<DirectoryInfo>("--config", description: "Directory containing NPC YAML configs") { IsRequired = true },
-    new Option<int>("--port", () => 5280, "Port to listen on")
+    serveConfigOption,
+    servePortOption
 };
 serveCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
 {
@@ -94,15 +104,17 @@ serveCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
         return;
     }
 
-    var agents = new Dictionary<string, NpcAgent>(StringComparer.OrdinalIgnoreCase);
+    var registryEntries = new List<KeyValuePair<string, NpcAgent>>();
     foreach (var file in configDir.EnumerateFiles("*.yaml", SearchOption.AllDirectories))
     {
         var agent = await GameRAGKit.Load(file.FullName);
         agent.UseEnv();
         await agent.EnsureIndexAsync();
-        agents[agent.PersonaId] = agent;
-        agents[Path.GetFileNameWithoutExtension(file.Name)] = agent;
+        registryEntries.Add(new KeyValuePair<string, NpcAgent>(agent.PersonaId, agent));
+        registryEntries.Add(new KeyValuePair<string, NpcAgent>(Path.GetFileNameWithoutExtension(file.Name), agent));
     }
+
+    var registry = new AgentRegistry(registryEntries);
 
     var builder = WebApplication.CreateSlimBuilder();
     builder.WebHost.ConfigureKestrel(options =>
@@ -110,28 +122,36 @@ serveCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
         options.ListenAnyIP(port);
     });
 
-    var app = builder.Build();
-
-    app.MapPost("/ask", async (AskRequest request, CancellationToken cancellationToken) =>
+    var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS");
+    builder.Services.AddCors(options =>
     {
-        if (!agents.TryGetValue(request.Npc, out var agent))
+        if (!string.IsNullOrWhiteSpace(corsOrigins))
         {
-            return Results.NotFound(new { error = "NPC not found" });
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
         }
-
-        var options = new AskOptions(Importance: request.Importance ?? agent.DefaultImportance);
-        var reply = await agent.AskAsync(request.Question, options, cancellationToken);
-        return Results.Ok(new AskResponse(reply.Text, reply.Sources, reply.Scores, reply.FromCloud));
+        else
+        {
+            options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+        }
     });
 
+    builder.Services.AddSingleton(registry);
+    builder.Services.AddControllers().AddApplicationPart(typeof(GameRagKit.Http.AskController).Assembly);
+
+    var app = builder.Build();
+    app.UseCors();
+    app.MapControllers();
     await app.RunAsync();
-}, serveCommand.Options[0], serveCommand.Options[1]);
+}, serveConfigOption, servePortOption);
 
 root.AddCommand(ingestCommand);
 root.AddCommand(chatCommand);
 root.AddCommand(serveCommand);
 
 return await root.InvokeAsync(args);
-
-internal sealed record AskRequest(string Npc, string Question, double? Importance);
-internal sealed record AskResponse(string Answer, string[] Sources, double[] Scores, bool FromCloud);

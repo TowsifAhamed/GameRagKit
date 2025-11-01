@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http.Headers;
 using GameRagKit.Config;
 using GameRagKit.Providers;
@@ -13,19 +14,22 @@ public sealed class ProviderResolver
             return Task.FromResult<IChatProvider?>(null);
         }
 
+        var engine = runtimeOptions.LocalEngine ?? config.Providers.Local.Engine ?? "ollama";
+        if (string.Equals(engine, "llamasharp", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult<IChatProvider?>(new LLamaSharpClient());
+        }
+
         var endpoint = runtimeOptions.LocalEndpoint ?? config.Providers.Local.Endpoint;
-        var model = runtimeOptions.LocalChatModel ?? config.Providers.Local.ChatModel;
-        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(model))
+        var chatModel = runtimeOptions.LocalChatModel ?? config.Providers.Local.ChatModel ?? "llama3";
+        var embedModel = runtimeOptions.LocalEmbedModel ?? config.Providers.Local.EmbedModel ?? "nomic-embed-text";
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
             return Task.FromResult<IChatProvider?>(null);
         }
 
-        var httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(endpoint)
-        };
-
-        return Task.FromResult<IChatProvider?>(new OllamaChatProvider(httpClient, model));
+        var client = CreateOllamaClient(endpoint, chatModel, embedModel);
+        return Task.FromResult<IChatProvider?>(client);
     }
 
     public Task<IEmbeddingProvider?> TryCreateLocalEmbeddingAsync(NpcConfig config, ProviderRuntimeOptions runtimeOptions, CancellationToken cancellationToken)
@@ -35,19 +39,22 @@ public sealed class ProviderResolver
             return Task.FromResult<IEmbeddingProvider?>(null);
         }
 
+        var engine = runtimeOptions.LocalEngine ?? config.Providers.Local.Engine ?? "ollama";
+        if (string.Equals(engine, "llamasharp", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult<IEmbeddingProvider?>(new LLamaSharpClient());
+        }
+
         var endpoint = runtimeOptions.LocalEndpoint ?? config.Providers.Local.Endpoint;
-        var model = runtimeOptions.LocalEmbedModel ?? config.Providers.Local.EmbedModel;
-        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(model))
+        var chatModel = runtimeOptions.LocalChatModel ?? config.Providers.Local.ChatModel ?? "llama3";
+        var embedModel = runtimeOptions.LocalEmbedModel ?? config.Providers.Local.EmbedModel ?? "nomic-embed-text";
+        if (string.IsNullOrWhiteSpace(endpoint))
         {
             return Task.FromResult<IEmbeddingProvider?>(null);
         }
 
-        var httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(endpoint)
-        };
-
-        return Task.FromResult<IEmbeddingProvider?>(new OllamaEmbeddingProvider(httpClient, model));
+        var client = CreateOllamaClient(endpoint, chatModel, embedModel);
+        return Task.FromResult<IEmbeddingProvider?>(client);
     }
 
     public Task<IChatProvider?> TryCreateCloudChatAsync(NpcConfig config, ProviderRuntimeOptions runtimeOptions, CancellationToken cancellationToken)
@@ -110,5 +117,16 @@ public sealed class ProviderResolver
 
         httpClient.Timeout = TimeSpan.FromSeconds(60);
         return httpClient;
+    }
+
+    private static OllamaClient CreateOllamaClient(string endpoint, string chatModel, string embedModel)
+    {
+        var baseAddress = endpoint.EndsWith('/') ? endpoint : endpoint + "/";
+        var httpClient = new HttpClient
+        {
+            BaseAddress = new Uri(baseAddress)
+        };
+
+        return new OllamaClient(httpClient, chatModel, embedModel);
     }
 }
