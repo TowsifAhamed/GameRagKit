@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace GameRagKit.Config;
 
 public sealed class GameRagOptions
@@ -20,20 +22,46 @@ public sealed class DatabaseOptions
     public string Kind { get; init; } = "pgvector";
     public string? ConnectionString { get; init; }
         = null;
+    public int EmbeddingDimensions { get; init; } = 1536;
     public string? QdrantCollection { get; init; }
         = "rag";
     public string? QdrantEndpoint { get; init; }
         = "http://localhost:6333";
+    public int QdrantGrpcPort { get; init; } = 6334;
+    public string? QdrantApiKey { get; init; }
+        = null;
 
     public static DatabaseOptions FromEnvironment()
     {
+        var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = "Host=localhost;Port=5432;Username=rag;Password=rag;Database=gamerag";
+        }
+
+        var embeddingDims = ParseInt(Environment.GetEnvironmentVariable("EMBED_DIM") ?? Environment.GetEnvironmentVariable("EMBED_DIMS"), 1536);
+        var grpcPort = ParseInt(Environment.GetEnvironmentVariable("QDRANT_GRPC_PORT"), 6334);
+
         return new DatabaseOptions
         {
             Kind = Environment.GetEnvironmentVariable("DB") ?? "pgvector",
-            ConnectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING"),
+            ConnectionString = connectionString,
+            EmbeddingDimensions = embeddingDims,
             QdrantCollection = Environment.GetEnvironmentVariable("QDRANT_COLLECTION") ?? "rag",
-            QdrantEndpoint = Environment.GetEnvironmentVariable("QDRANT_ENDPOINT") ?? Environment.GetEnvironmentVariable("ENDPOINT") ?? "http://localhost:6333"
+            QdrantEndpoint = Environment.GetEnvironmentVariable("QDRANT_ENDPOINT") ?? Environment.GetEnvironmentVariable("ENDPOINT") ?? "http://localhost:6333",
+            QdrantGrpcPort = grpcPort,
+            QdrantApiKey = Environment.GetEnvironmentVariable("QDRANT_API_KEY") ?? Environment.GetEnvironmentVariable("API_KEY")
         };
+    }
+
+    private static int ParseInt(string? value, int fallback)
+    {
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0)
+        {
+            return parsed;
+        }
+
+        return fallback;
     }
 }
 

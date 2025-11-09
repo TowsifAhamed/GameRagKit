@@ -265,7 +265,7 @@ public sealed class NpcAgent : IAsyncDisposable
         return promptBuilder.ToString();
     }
 
-    private IReadOnlyDictionary<string, string> BuildMetadata(IndexScopeKey scope, SourceConfig source, string sourcePath)
+    private Dictionary<string, string> BuildMetadata(IndexScopeKey scope, SourceConfig source, string sourcePath)
     {
         var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {

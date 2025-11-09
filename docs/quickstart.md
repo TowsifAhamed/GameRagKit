@@ -54,8 +54,11 @@ The HTTP service exposes:
 - `POST /ask/stream`
 - `POST /ingest` *(optional, see roadmap)*
 - `GET /health`
+- `GET /metrics` *(Prometheus text format)*
 
 All requests must include `X-GameRAG-Protocol: 1`.
+
+Set `SERVICE_API_KEY=super-secret` (or `SERVICE_BEARER_TOKEN=...`) to require callers to send either `X-API-Key: super-secret` or `Authorization: Bearer ...`. Health and metrics endpoints stay anonymous by default; override with `SERVICE_AUTH_ALLOW="/health,/metrics"`.
 
 ## 6. Ask a question
 

@@ -27,6 +27,8 @@ public sealed class IngestController : ControllerBase
             return NotFound(new { error = "NPC not found" });
         }
 
+        ApiMetrics.ObserveIngest(request.Npc);
+
         var id = await agent.HotIngestAsync(request.Text, request.Tags, cancellationToken).ConfigureAwait(false);
         return Ok(new { added = id });
     }

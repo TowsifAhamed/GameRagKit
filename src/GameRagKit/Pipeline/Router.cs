@@ -53,7 +53,16 @@ public sealed class Router
             return Require(cloudOnly, "Cloud chat provider is not configured.");
         }
 
-        var importance = options.Importance > 0 ? options.Importance : config.Persona.DefaultImportance ?? config.Providers.Routing.DefaultImportance;
+        var importance = options.Importance;
+        if (double.IsNaN(importance))
+        {
+            importance = config.Persona.DefaultImportance ?? config.Providers.Routing.DefaultImportance;
+        }
+        else
+        {
+            importance = Math.Clamp(importance, 0d, 1d);
+        }
+
         var local = await _resolver.TryCreateLocalChatAsync(config, runtime, ct).ConfigureAwait(false);
         var cloud = await _resolver.TryCreateCloudChatAsync(config, runtime, ct).ConfigureAwait(false);
 

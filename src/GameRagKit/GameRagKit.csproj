@@ -8,6 +8,8 @@
     <PackageReference Include="YamlDotNet" Version="15.1.2" />
     <PackageReference Include="Npgsql" Version="8.0.3" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <PackageReference Include="prometheus-net.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="Qdrant.Client" Version="1.15.1" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

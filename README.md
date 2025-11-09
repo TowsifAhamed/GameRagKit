@@ -126,6 +126,11 @@ You receive:
 }
 ```
 
+### Authentication & metrics
+
+- Add `SERVICE_API_KEY` (or `SERVICE_BEARER_TOKEN`) to require `X-API-Key` or `Authorization: Bearer` on incoming requests. When set, `/ask`, `/ask/stream`, and `/ingest` require credentials while `/health` and `/metrics` stay public unless overridden via `SERVICE_AUTH_ALLOW`.
+- `GET /metrics` exposes Prometheus-compatible counters for ask/stream/ingest calls. Combine with `app.UseHttpMetrics()` (already enabled) to scrape latency and status labels.
+
 ## Embedded usage (Unity, dedicated servers)
 
 ```csharp
@@ -171,6 +176,7 @@ Routing rules combine config defaults with per-question overrides:
 
 - `mode` = `local_only`, `cloud_only`, or `hybrid` (default)
 - Hybrid chooses cloud when `importance >= 0.5` or when forced via `AskOptions`
+- If the request omits `importance`, the persona's `default_importance` (falling back to the routing default) is used
 - Automatic cloud failover triggers when a local response is empty/too short (configurable via `cloud_fallback_on_miss`)
 - `RememberAsync` writes memory chunks instantly so subsequent questions can retrieve them without re-ingesting
 

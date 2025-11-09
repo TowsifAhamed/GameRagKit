@@ -1,11 +1,11 @@
 using System;
-using System.Net.Http;
 using GameRagKit.Config;
 using GameRagKit.Pipeline;
 using GameRagKit.Routing;
 using GameRagKit.Storage;
 using GameRagKit.Text;
 using GameRagKit.VectorStores;
+using Qdrant.Client;
 
 namespace GameRagKit;
 
@@ -41,27 +41,27 @@ public static class GameRAGKit
 
         return kind.ToLowerInvariant() switch
         {
-            "pgvector" => new PgVectorStore(database.ConnectionString ?? throw new InvalidOperationException("CONNECTION_STRING is required for pgvector.")),
-            "qdrant" => new QdrantStore(CreateQdrantClient(database), database.QdrantCollection ?? "rag"),
+            "pgvector" => new PgVectorStore(
+                database.ConnectionString ?? throw new InvalidOperationException("CONNECTION_STRING is required for pgvector."),
+                database.EmbeddingDimensions),
+            "qdrant" => new QdrantStore(
+                CreateQdrantClient(database),
+                database.QdrantCollection ?? "rag",
+                database.EmbeddingDimensions),
             _ => throw new NotSupportedException($"Unknown vector store: {database.Kind}")
         };
     }
 
-    private static HttpClient CreateQdrantClient(DatabaseOptions database)
+    private static QdrantClient CreateQdrantClient(DatabaseOptions database)
     {
         var endpoint = database.QdrantEndpoint ?? "http://localhost:6333";
-        var httpClient = new HttpClient
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
         {
-            BaseAddress = new Uri(endpoint.EndsWith('/') ? endpoint : endpoint + "/")
-        };
-
-        var apiKey = Environment.GetEnvironmentVariable("API_KEY");
-        if (!string.IsNullOrWhiteSpace(apiKey))
-        {
-            httpClient.DefaultRequestHeaders.Remove("api-key");
-            httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+            throw new InvalidOperationException($"Invalid Qdrant endpoint: {endpoint}");
         }
 
-        return httpClient;
+        var useHttps = string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        var port = database.QdrantGrpcPort > 0 ? database.QdrantGrpcPort : (uri.IsDefaultPort ? 6334 : uri.Port);
+        return new QdrantClient(uri.Host, port, useHttps, database.QdrantApiKey);
     }
 }
