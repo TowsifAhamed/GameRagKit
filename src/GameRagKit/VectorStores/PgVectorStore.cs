@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -13,13 +15,25 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _tableName;
+    private readonly int _dims;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _initialized;
 
-    public PgVectorStore(string connectionString, string tableName = "rag_chunks")
+    public PgVectorStore(string connectionString, int embeddingDims, string tableName = "rag_chunks")
     {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new ArgumentException("A PostgreSQL connection string is required.", nameof(connectionString));
+        }
+
+        if (embeddingDims <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(embeddingDims), embeddingDims, "Embedding dimensions must be positive.");
+        }
+
         _dataSource = new NpgsqlDataSourceBuilder(connectionString).Build();
         _tableName = tableName;
+        _dims = embeddingDims;
     }
 
     public async Task UpsertAsync(IEnumerable<RagRecord> records, CancellationToken ct = default)
@@ -30,21 +44,20 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
             return;
         }
 
-        var dimension = recordList[0].Embedding.Length;
-        if (dimension <= 0)
+        for (var i = 0; i < recordList.Count; i++)
         {
-            throw new InvalidOperationException("Embeddings must contain at least one value.");
-        }
+            if (recordList[i].Embedding is not { Length: > 0 } embedding)
+            {
+                throw new InvalidOperationException("Embeddings must contain at least one value.");
+            }
 
-        for (var i = 1; i < recordList.Count; i++)
-        {
-            if (recordList[i].Embedding.Length != dimension)
+            if (embedding.Length != _dims)
             {
                 throw new InvalidOperationException("All embeddings must have the same dimensionality.");
             }
         }
 
-        await EnsureSchemaAsync(dimension, allowCreate: true, ct).ConfigureAwait(false);
+        await EnsureSchemaAsync(allowCreate: true, ct).ConfigureAwait(false);
 
         await using var connection = await _dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(ct).ConfigureAwait(false);
@@ -65,7 +78,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
 
             command.Parameters.AddWithValue("key", record.Key);
             command.Parameters.AddWithValue("collection", record.Collection);
-            command.Parameters.AddWithValue("tags", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(record.TagsOrEmpty));
+            command.Parameters.AddWithValue("tags", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(record.Tags ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
             command.Parameters.AddWithValue("text", record.Text);
             command.Parameters.AddWithValue("embedding", FormatVectorLiteral(record.Embedding));
 
@@ -81,7 +94,17 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
         IReadOnlyDictionary<string, string>? filters = null,
         CancellationToken ct = default)
     {
-        var schemaReady = await EnsureSchemaAsync(dimension: null, allowCreate: false, ct).ConfigureAwait(false);
+        if (query.Length != _dims)
+        {
+            throw new InvalidOperationException($"Expected query embedding with {_dims} dimensions but received {query.Length}.");
+        }
+
+        if (topK <= 0)
+        {
+            return Array.Empty<RagHit>();
+        }
+
+        var schemaReady = await EnsureSchemaAsync(allowCreate: false, ct).ConfigureAwait(false);
         if (!schemaReady)
         {
             return Array.Empty<RagHit>();
@@ -97,6 +120,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
 
         if (filters != null)
         {
+            var tagIndex = 0;
             foreach (var (key, value) in filters)
             {
                 if (string.Equals(key, "collection", StringComparison.OrdinalIgnoreCase))
@@ -106,9 +130,13 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
                 }
                 else
                 {
-                    var paramName = $"tag_{command.Parameters.Count}";
-                    conditions.Add($"tags ->> '{key}' = @{paramName}");
-                    command.Parameters.AddWithValue(paramName, value);
+                    var paramName = $"tag_{tagIndex++}";
+                    conditions.Add($"tags @> @{paramName}");
+                    var payload = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        [key] = value
+                    };
+                    command.Parameters.AddWithValue(paramName, NpgsqlDbType.Jsonb, JsonSerializer.Serialize(payload));
                 }
             }
         }
@@ -139,7 +167,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
         return results;
     }
 
-    private async Task<bool> EnsureSchemaAsync(int? dimension, bool allowCreate, CancellationToken ct)
+    private async Task<bool> EnsureSchemaAsync(bool allowCreate, CancellationToken ct)
     {
         if (_initialized)
         {
@@ -164,24 +192,11 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
                     return false;
                 }
 
-                if (dimension is null or <= 0)
-                {
-                    throw new InvalidOperationException("Cannot create the vector table without a known embedding dimension.");
-                }
-
-                await CreateSchemaAsync(connection, dimension.Value, ct).ConfigureAwait(false);
+                await CreateSchemaAsync(connection, _dims, ct).ConfigureAwait(false);
             }
             else
             {
-                if (dimension is not null)
-                {
-                    var existingDimension = await GetExistingDimensionAsync(connection, ct).ConfigureAwait(false);
-                    if (existingDimension.HasValue && existingDimension.Value != dimension.Value)
-                    {
-                        throw new InvalidOperationException($"The existing vector table uses dimension {existingDimension.Value}, which does not match the embedding dimension {dimension.Value}. Regenerate the table or align your embeddings.");
-                    }
-                }
-
+                await EnsureEmbeddingDimensionsAsync(connection, ct).ConfigureAwait(false);
                 await EnsureIndexesAsync(connection, ct).ConfigureAwait(false);
             }
 
@@ -227,26 +242,6 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
         return result is not null && result is not DBNull;
     }
 
-    private async Task<int?> GetExistingDimensionAsync(NpgsqlConnection connection, CancellationToken ct)
-    {
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
-            SELECT NULLIF(atttypmod, -1)
-            FROM pg_attribute
-            WHERE attrelid = to_regclass(@tableName)
-              AND attname = 'embedding';
-        ";
-        command.Parameters.AddWithValue("tableName", _tableName);
-        var result = await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
-        if (result is int typmod && typmod > 0)
-        {
-            var dimension = typmod - 4;
-            return dimension > 0 ? dimension : null;
-        }
-
-        return null;
-    }
-
     private async Task CreateSchemaAsync(NpgsqlConnection connection, int dimension, CancellationToken ct)
     {
         await using var command = connection.CreateCommand();
@@ -278,6 +273,31 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
             CREATE INDEX IF NOT EXISTS {embeddingIndex} ON {_tableName} USING HNSW (embedding vector_l2_ops);
         ";
         await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+    }
+
+    private async Task EnsureEmbeddingDimensionsAsync(NpgsqlConnection connection, CancellationToken ct)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"
+            SELECT atttypmod
+            FROM pg_attribute
+            WHERE attrelid = @tableName::regclass
+              AND attname = 'embedding';
+        ";
+        command.Parameters.AddWithValue("tableName", _tableName);
+
+        var result = await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
+        if (result is null || result is DBNull)
+        {
+            throw new InvalidOperationException($"Embedding column not found on table {_tableName}.");
+        }
+
+        var typeModifier = Convert.ToInt32(result, CultureInfo.InvariantCulture);
+        var existingDims = typeModifier - 4; // pgvector stores size as typmod = 4 + dimensions
+        if (existingDims != _dims)
+        {
+            throw new InvalidOperationException($"Existing embedding dimension {existingDims} does not match configured dimension {_dims} for table {_tableName}.");
+        }
     }
 
     private string BuildIdentifier(string suffix)

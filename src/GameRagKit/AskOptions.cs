@@ -4,7 +4,7 @@ public sealed record AskOptions(
     int TopK = 4,
     bool InCharacter = true,
     string? SystemOverride = null,
-    double Importance = 0.2,
+    double Importance = double.NaN,
     bool ForceLocal = false,
     bool ForceCloud = false);
 

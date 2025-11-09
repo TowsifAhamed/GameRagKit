@@ -35,9 +35,12 @@ public sealed class AskStreamController : ControllerBase
         Response.Headers.Connection = "keep-alive";
         Response.ContentType = "text/event-stream";
 
+        ApiMetrics.ObserveAskStream(request.Npc);
+
         var options = request.ToAskOptions();
         await foreach (var token in agent.StreamAsync(request.Question, options, cancellationToken).ConfigureAwait(false))
         {
+            ApiMetrics.ObserveAskStreamToken(request.Npc);
             await Response.WriteAsync($"data: {token}\n\n", cancellationToken).ConfigureAwait(false);
             await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
         }

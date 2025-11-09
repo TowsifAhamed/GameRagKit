@@ -9,7 +9,7 @@ cd docker
 docker compose -f docker-compose.postgres.yml up -d
 ```
 
-The container exposes port `5433` locally to avoid conflicts with an existing Postgres install.
+The container exposes port `5432` locally so the default connection string works out of the box.
 
 ## 2. Configure GameRAGKit
 
@@ -17,10 +17,10 @@ Create a `.env` file (or edit `.env.example`):
 
 ```env
 DB=pgvector
-CONNECTION_STRING=Host=localhost;Port=5433;Username=postgres;Password=postgres;Database=gamerag
+CONNECTION_STRING=Host=localhost;Port=5432;Username=rag;Password=rag;Database=gamerag
 ```
 
-The CLI and server read these values automatically. When the server starts it will ensure the `vector` and `pgcrypto` extensions exist and create the `rag_chunks` table with the necessary HNSW index.
+The server ensures the `vector` extension exists, creates the `rag_chunks` table, and wires up the HNSW index when it first runs.
 
 ## 3. (Optional) Inspect the schema
 

@@ -26,6 +26,8 @@ public sealed class AskController : ControllerBase
             return NotFound(new { error = "NPC not found" });
         }
 
+        ApiMetrics.ObserveAsk(request.Npc);
+
         var options = request.ToAskOptions();
         var reply = await agent.AskAsync(request.Question, options, cancellationToken).ConfigureAwait(false);
         var response = new AskHttpResponse(reply.Text, reply.Sources, reply.Scores, reply.FromCloud);
@@ -41,7 +43,7 @@ public sealed record AskHttpRequest(string Npc, string Question, AskOptionsPaylo
             TopK: Options?.TopK ?? 4,
             InCharacter: Options?.InCharacter ?? true,
             SystemOverride: Options?.SystemOverride,
-            Importance: Options?.Importance ?? 0.2,
+            Importance: Options?.Importance ?? double.NaN,
             ForceLocal: Options?.ForceLocal ?? false,
             ForceCloud: Options?.ForceCloud ?? false);
     }

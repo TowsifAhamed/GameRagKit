@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Prometheus;
 
 var root = new RootCommand("GameRAGKit command-line tools");
 
@@ -141,12 +142,18 @@ serveCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
         }
     });
 
+    var authOptions = ApiAuthOptions.FromEnvironment();
+
     builder.Services.AddSingleton(registry);
+    builder.Services.AddSingleton(authOptions);
     builder.Services.AddControllers().AddApplicationPart(typeof(GameRagKit.Http.AskController).Assembly);
 
     var app = builder.Build();
     app.UseCors();
+    app.UseMiddleware<ApiAuthenticationMiddleware>();
+    app.UseHttpMetrics();
     app.MapControllers();
+    app.MapMetrics("/metrics");
     await app.RunAsync();
 }, serveConfigOption, servePortOption);
 

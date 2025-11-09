@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 namespace GameRagKit.VectorStores;
 
 public interface IVectorStore
@@ -18,15 +16,10 @@ public sealed record RagRecord(
     string Collection,
     string Text,
     float[] Embedding,
-    IReadOnlyDictionary<string, string>? Tags = null)
-{
-    public IReadOnlyDictionary<string, string> TagsOrEmpty { get; } =
-        Tags?.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase) ??
-        ImmutableDictionary<string, string>.Empty;
-}
+    Dictionary<string, string>? Tags = null);
 
 public sealed record RagHit(
     string Key,
     string Text,
     double? Score,
-    IReadOnlyDictionary<string, string> Tags);
+    Dictionary<string, string> Tags);
