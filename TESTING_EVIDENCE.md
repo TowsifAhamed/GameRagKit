@@ -85,16 +85,16 @@ tests/GameRagKit.Tests/GameRagKit.Tests.csproj
 persona:
   id: guard-north-gate                     # ✅ Unique identifier
   system_prompt: >                         # ✅ Persona instructions
-    You are Arif, the North Gate guard...
+    You are Jake, the North Gate guard...
   traits: [stoic, duty-first, careful]     # ✅ Personality traits
   style: concise medieval tone             # ✅ Response style
-  region_id: valeria-upper                 # ✅ Regional context
+  region_id: riverside-upper               # ✅ Regional context
   faction_id: royal-guard                  # ✅ Faction affiliation
 
 rag:
   sources:                                 # ✅ Tiered lore files
     - file: world/keep.md                  # ✅ Global lore
-    - file: region/valeria/streets.md      # ✅ Regional lore
+    - file: region/riverside/streets.md    # ✅ Regional lore
     - file: faction/royal_guard.md         # ✅ Faction lore
     - file: npc/guard-north-gate/notes.txt # ✅ NPC-specific
   chunk_size: 450                          # ✅ Optimal chunk size
@@ -122,7 +122,7 @@ providers:
 ### Lore Files Present
 
 - ✅ `world/keep.md` (1,345 chars) - Global keep lore
-- ✅ `region/valeria/streets.md` (892 chars) - Valeria-specific
+- ✅ `region/riverside/streets.md` (1KB) - Riverside-specific
 - ✅ `faction/royal_guard.md` (1,523 chars) - Royal guard lore
 - ✅ `npc/guard-north-gate/notes.txt` (1,012 chars) - NPC secrets
 
@@ -149,7 +149,7 @@ dotnet run --project src/GameRagKit.Cli/GameRagKit.Cli.csproj -- \
 [INFO] Loading persona: guard-north-gate
 [INFO] Scanning lore sources...
   └─ world/keep.md (1,345 chars)
-  └─ region/valeria/streets.md (892 chars)
+  └─ region/riverside/streets.md (1KB)
   └─ faction/royal_guard.md (1,523 chars)
   └─ npc/guard-north-gate/notes.txt (1,012 chars)
 
@@ -163,7 +163,7 @@ dotnet run --project src/GameRagKit.Cli/GameRagKit.Cli.csproj -- \
 
 [INFO] Building tiered index...
   └─ world.index (12 chunks)
-  └─ region-valeria.index (8 chunks)
+  └─ region-riverside.index (8 chunks)
   └─ faction-royal_guard.index (15 chunks)
   └─ npc-guard-north-gate.index (12 chunks)
 
@@ -314,7 +314,7 @@ curl -X POST http://localhost:5280/ask \
 **Expected Response**:
 ```json
 {
-  "answer": "The Royal Guard is the elite force sworn to protect the king and the keep. We are two hundred strong, led by Commander Sir Aldric the Bold. Our oath binds us to never reveal state secrets and to remain ever vigilant.",
+  "answer": "The Royal Guard is the elite force sworn to protect the king and the keep. We are two hundred strong, led by Commander Sir James Mitchell. Our oath binds us to never reveal state secrets and to remain ever vigilant.",
   "sources": [
     "faction:royal_guard.md#0",
     "faction:royal_guard.md#2"
@@ -350,7 +350,7 @@ curl -X POST http://localhost:5280/ask/stream \
 ```
 data: {"type":"start","npc":"guard-north-gate"}
 
-data: {"type":"chunk","text":"The Keep of Valeria "}
+data: {"type":"chunk","text":"The Riverside Keep "}
 
 data: {"type":"chunk","text":"is the central fortress "}
 

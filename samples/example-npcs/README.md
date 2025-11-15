@@ -2,9 +2,9 @@
 
 This directory contains a complete, ready-to-use NPC example demonstrating GameRagKit's tiered RAG system.
 
-## NPC: Arif, the North Gate Guard
+## NPC: Jake, the North Gate Guard
 
-**Persona**: A stoic royal guard stationed at Valeria's North Gate during the pre-siege era.
+**Persona**: A stoic royal guard stationed at Riverside's North Gate during the pre-siege era.
 
 **Personality**:
 - Speaks in medieval tone
@@ -25,7 +25,7 @@ example-npcs/
 ├── world/
 │   └── keep.md                     # Global lore (1.3KB)
 ├── region/
-│   └── valeria/
+│   └── riverside/
 │       └── streets.md              # Regional lore (890B)
 ├── faction/
 │   └── royal_guard.md              # Faction lore (1.5KB)
@@ -95,7 +95,7 @@ dotnet run --project src/GameRagKit.Cli/GameRagKit.Cli.csproj -- \
 ```bash
 dotnet run --project src/GameRagKit.Cli/GameRagKit.Cli.csproj -- \
   chat --npc samples/example-npcs/guard-north-gate.yaml \
-  --question "What is the Keep of Valeria?"
+  --question "What is the Riverside Keep?"
 ```
 
 **Expected**: Guard describes the keep's history and features
@@ -110,8 +110,8 @@ This example demonstrates how GameRagKit blends context from multiple levels:
 - **Content**: Keep history, architecture, master key location
 
 ### Level 2: Region (Shared by NPCs in same region)
-- **File**: `region/valeria/streets.md`
-- **Scope**: NPCs in the "valeria-upper" region
+- **File**: `region/riverside/streets.md`
+- **Scope**: NPCs in the "riverside-upper" region
 - **Content**: North Gate details, local landmarks, trade routes
 
 ### Level 3: Faction (Shared by NPCs in same faction)
@@ -160,7 +160,7 @@ rag:
 ```markdown
 ---
 era: pre-siege
-region: valeria
+region: riverside
 ---
 # Content here...
 ```

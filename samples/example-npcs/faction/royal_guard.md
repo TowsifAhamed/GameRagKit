@@ -1,4 +1,4 @@
-# Royal Guard of Valeria
+# Royal Guard of Riverside
 
 ## Overview
 
@@ -6,7 +6,7 @@ The Royal Guard is the elite military force sworn to protect the king, the royal
 
 ## Organization
 
-- **Commander**: Sir Aldric the Bold
+- **Commander**: Sir James Mitchell
 - **Gate Captains**: Four captains, one for each gate
 - **Guards**: Approximately 200 active guards
 - **Reserves**: Another 150 in reserve

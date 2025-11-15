@@ -1,4 +1,4 @@
-# Streets of Valeria
+# Streets of Riverside
 
 ## Upper District
 
@@ -10,7 +10,7 @@ The North Gate is one of four main entrances to the upper district. It is:
 - Heavily guarded at all times
 - The primary entrance for diplomatic visitors
 - Connected to the main trade road leading north
-- Monitored by Arif, a stoic and duty-first guard known for his careful scrutiny
+- Monitored by Jake, a stoic and duty-first guard known for his careful scrutiny
 
 ## Trade Routes
 
@@ -28,4 +28,4 @@ Located near the North Gate, this inn is known for serving royal messengers. Tho
 
 ### Market Square
 
-The heart of Valerian commerce, where goods from across the kingdom are traded daily.
+The heart of Riverside commerce, where goods from across the kingdom are traded daily.

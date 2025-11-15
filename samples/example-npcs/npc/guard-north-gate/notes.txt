@@ -1,5 +1,5 @@
 ROYAL GUARD BRIEFING - CLASSIFIED
-Guard: Arif
+Guard: Jake
 Post: North Gate, Upper District
 Era: Pre-Siege
 

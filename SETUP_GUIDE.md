@@ -69,7 +69,7 @@ export ENDPOINT=https://api.openai.com/
 
 ### 4. Test with Example NPC
 
-We've included a ready-to-use example NPC: **Arif, the North Gate Guard**
+We've included a ready-to-use example NPC: **Jake, the North Gate Guard**
 
 ```bash
 # Ingest the example NPC's lore
@@ -188,8 +188,8 @@ samples/example-npcs/
 ├── world/
 │   └── keep.md                     # Global lore (shared by all NPCs)
 ├── region/
-│   └── valeria/
-│       └── streets.md              # Regional lore (for Valeria NPCs)
+│   └── riverside/
+│       └── streets.md              # Regional lore (for Riverside NPCs)
 ├── faction/
 │   └── royal_guard.md              # Faction lore (for royal guard NPCs)
 └── npc/
@@ -203,7 +203,7 @@ After ingestion, indexes are stored in `.gamerag/` directories:
 samples/example-npcs/.gamerag/
 └── guard-north-gate/
     ├── world.index
-    ├── region-valeria.index
+    ├── region-riverside.index
     ├── faction-royal_guard.index
     └── npc-guard-north-gate.index
 ```

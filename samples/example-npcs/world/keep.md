@@ -1,8 +1,8 @@
-# The Keep of Valeria
+# The Riverside Keep
 
 ## History
 
-The Keep of Valeria was built over 300 years ago during the First Age of Unity. It stands as the central fortress of the kingdom, housing the royal family and their most trusted guards.
+The Riverside Keep was built over 300 years ago during the First Age of Unity. It stands as the central fortress of the kingdom, housing the royal family and their most trusted guards.
 
 ## Architecture
 
