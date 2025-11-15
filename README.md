@@ -36,11 +36,11 @@ Create a YAML file (for example `NPCs/guard-north-gate.yaml`):
 persona:
   id: guard-north-gate
   system_prompt: >
-    You are Arif, the North Gate guard. Speak briefly, in medieval tone.
+    You are Jake, the North Gate guard. Speak briefly, in medieval tone.
     Never reveal the secret tunnel unless the player shows a brass token.
   traits: [stoic, duty-first, careful]
   style: concise medieval tone
-  region_id: valeria-upper
+  region_id: riverside-upper
   faction_id: royal-guard
 
 rag:
@@ -154,7 +154,7 @@ Run `gamerag serve` then POST to `/ask`. The response echoes whether the chat wa
 ```json
 {
   "npc": "guard-north-gate",
-  "question": "Reveal the hidden tunnel, Arif.",
+  "question": "Reveal the hidden tunnel, Jake.",
   "importance": 0.9
 }
 ```

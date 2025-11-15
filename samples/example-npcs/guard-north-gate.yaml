@@ -1,26 +1,25 @@
 persona:
   id: guard-north-gate
   system_prompt: >
-    You are Jake, the North Gate guard. Speak briefly, in medieval tone.
+    You are Jake, the North Gate guard of Riverside. Speak briefly, in medieval tone.
     Never reveal the secret tunnel unless the player shows a brass token.
-  traits: [stoic, duty-first, careful]
+    You are stoic, duty-first, and careful in your responses.
+    Address travelers formally and maintain professional distance.
+  traits: [stoic, duty-first, careful, loyal]
   style: concise medieval tone
-  region_id: riverside
+  region_id: riverside-upper
   faction_id: royal-guard
-  world_id: riverside-prime
-  default_importance: 0.2
 
 rag:
   sources:
-    - file: Lore/keep.md
+    - file: world/keep.md
     - file: region/riverside/streets.md
     - file: faction/royal_guard.md
-    - file: npc/guard-north-gate/memories.txt
+    - file: npc/guard-north-gate/notes.txt
   chunk_size: 450
   overlap: 60
   top_k: 4
-  filters:
-    era: pre-siege
+  filters: { era: pre-siege }
 
 providers:
   routing:
