@@ -10,12 +10,14 @@ public sealed class CloudEmbeddingProvider : IEmbeddingProvider
     private readonly HttpClient _httpClient;
     private readonly string _model;
     private readonly string _provider;
+    private readonly string? _apiKey;
 
-    public CloudEmbeddingProvider(HttpClient httpClient, string provider, string model)
+    public CloudEmbeddingProvider(HttpClient httpClient, string provider, string model, string? apiKey = null)
     {
         _httpClient = httpClient;
         _provider = provider;
         _model = model;
+        _apiKey = apiKey;
     }
 
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken)
@@ -49,7 +51,7 @@ public sealed class CloudEmbeddingProvider : IEmbeddingProvider
         return _provider switch
         {
             "azure" => "openai/deployments/{model}/embeddings?api-version=2024-05-01-preview".Replace("{model}", _model),
-            "gemini" => $"v1beta/models/{_model}:embedContent",
+            "gemini" => $"v1beta/models/{_model}:embedContent?key={_apiKey}",
             _ => "v1/embeddings"
         };
     }

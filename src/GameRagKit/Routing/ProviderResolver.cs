@@ -73,7 +73,7 @@ public sealed class ProviderResolver
 
         var providerName = runtimeOptions.CloudProvider ?? "openai";
         var httpClient = CreateHttpClient(endpoint, runtimeOptions.CloudApiKey, providerName);
-        return Task.FromResult<IChatProvider?>(new CloudChatProvider(httpClient, providerName, model));
+        return Task.FromResult<IChatProvider?>(new CloudChatProvider(httpClient, providerName, model, runtimeOptions.CloudApiKey));
     }
 
     public Task<IEmbeddingProvider?> TryCreateCloudEmbeddingAsync(NpcConfig config, ProviderRuntimeOptions runtimeOptions, CancellationToken cancellationToken)
@@ -92,7 +92,7 @@ public sealed class ProviderResolver
 
         var providerName = runtimeOptions.CloudProvider ?? "openai";
         var httpClient = CreateHttpClient(endpoint, runtimeOptions.CloudApiKey, providerName);
-        return Task.FromResult<IEmbeddingProvider?>(new CloudEmbeddingProvider(httpClient, providerName, model));
+        return Task.FromResult<IEmbeddingProvider?>(new CloudEmbeddingProvider(httpClient, providerName, model, runtimeOptions.CloudApiKey));
     }
 
     private static HttpClient CreateHttpClient(string endpoint, string? apiKey, string provider)
@@ -108,6 +108,12 @@ public sealed class ProviderResolver
             {
                 httpClient.DefaultRequestHeaders.Remove("api-key");
                 httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+            }
+            else if (string.Equals(provider, "gemini", StringComparison.OrdinalIgnoreCase))
+            {
+                // Gemini uses query parameter authentication (?key=), not headers
+                // The API key will be appended to the URL by CloudChatProvider/CloudEmbeddingProvider
+                // Do not set any Authorization header
             }
             else
             {

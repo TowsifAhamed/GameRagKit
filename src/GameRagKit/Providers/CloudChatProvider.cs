@@ -11,12 +11,14 @@ public sealed class CloudChatProvider : IChatProvider
     private readonly HttpClient _httpClient;
     private readonly string _model;
     private readonly string _provider;
+    private readonly string? _apiKey;
 
-    public CloudChatProvider(HttpClient httpClient, string provider, string model)
+    public CloudChatProvider(HttpClient httpClient, string provider, string model, string? apiKey = null)
     {
         _httpClient = httpClient;
         _provider = provider;
         _model = model;
+        _apiKey = apiKey;
     }
 
     public async Task<ChatResponse> GetChatResponseAsync(string systemPrompt, string context, string question, CancellationToken cancellationToken)
@@ -86,7 +88,7 @@ public sealed class CloudChatProvider : IChatProvider
         return _provider switch
         {
             "azure" => "openai/deployments/{model}/chat/completions?api-version=2024-05-01-preview".Replace("{model}", _model),
-            "gemini" => $"v1beta/models/{_model}:generateContent",
+            "gemini" => $"v1beta/models/{_model}:generateContent?key={_apiKey}",
             _ => "v1/chat/completions"
         };
     }
