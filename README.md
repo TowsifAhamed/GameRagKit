@@ -1,5 +1,9 @@
 # GameRAGKit
 
+[![NuGet](https://img.shields.io/nuget/v/GameRagKit.svg)](https://www.nuget.org/packages/GameRagKit/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/GameRagKit.svg)](https://www.nuget.org/packages/GameRagKit/)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE.md)
+
 GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for building non-player characters (NPCs) that can scale from solo prototypes to fully-fledged productions. It keeps the runtime lightweight enough for Unity or dedicated C# services, while still letting you route high-impact scenes to cloud LLMs on demand.
 
 - **Engine agnostic.** Embed the library directly in Unity/other C# runtimes or host the bundled HTTP service for Unreal and everything else.
@@ -7,6 +11,32 @@ GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for buildin
 - **Designer friendly.** Personas live in YAML, lore lives in folders, and the CLI handles ingestion, chat smoke tests, and packaging.
 
 > Dual-licensed: PolyForm Noncommercial 1.0.0 for community use with commercial terms available from the author.
+
+## Installation
+
+### NuGet Package
+
+Install the GameRagKit package from NuGet:
+
+```bash
+dotnet add package GameRagKit
+```
+
+Or via Package Manager Console:
+
+```powershell
+Install-Package GameRagKit
+```
+
+### From Source
+
+Clone the repository and build from source:
+
+```bash
+git clone https://github.com/TowsifAhamed/GameRagKit.git
+cd GameRagKit
+dotnet build
+```
 
 ## Repository layout
 
