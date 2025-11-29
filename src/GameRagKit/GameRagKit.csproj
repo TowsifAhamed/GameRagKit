@@ -3,6 +3,20 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>GameRagKit</PackageId>
+    <Authors>Towsif Ahamed</Authors>
+    <Company>Towsif Ahamed</Company>
+    <Description>A RAG (Retrieval-Augmented Generation) toolkit for game development, supporting Unity and Unreal Engine integrations with NPC dialogue and context management. Dual-licensed: PolyForm Noncommercial 1.0.0 for community use with commercial terms available from the author.</Description>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/TowsifAhamed/GameRagKit</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/TowsifAhamed/GameRagKit</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>rag;game-development;unity;unreal-engine;npc;dialogue;ai</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Copyright>Copyright (c) 2025 Towsif Ahamed</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="YamlDotNet" Version="15.1.2" />
@@ -13,5 +27,9 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../LICENSE.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
