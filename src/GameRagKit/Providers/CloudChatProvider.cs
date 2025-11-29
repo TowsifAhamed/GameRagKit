@@ -26,6 +26,18 @@ public sealed class CloudChatProvider : IChatProvider
         response.EnsureSuccessStatusCode();
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+        if (_provider == "gemini")
+        {
+            var geminiContent = document.RootElement.GetProperty("candidates")[0]
+                .GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString() ?? string.Empty;
+            var geminiFinishReason = document.RootElement.GetProperty("candidates")[0]
+                .TryGetProperty("finishReason", out var geminiFinish) ? geminiFinish.GetString() : null;
+            var geminiShouldFallback = string.Equals(geminiFinishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase);
+            return new ChatResponse(geminiContent.Trim(), geminiShouldFallback);
+        }
+
+        // OpenAI-compatible format (openai, azure, anthropic, groq, openrouter, mistral, etc.)
         var content = document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? string.Empty;
         var finishReason = document.RootElement.GetProperty("choices")[0].TryGetProperty("finish_reason", out var finish) ? finish.GetString() : null;
         var shouldFallback = string.Equals(finishReason, "length", StringComparison.OrdinalIgnoreCase);
@@ -34,6 +46,26 @@ public sealed class CloudChatProvider : IChatProvider
 
     private object BuildRequest(string systemPrompt, string context, string question)
     {
+        if (_provider == "gemini")
+        {
+            var fullPrompt = $"{systemPrompt}\n\nCONTEXT:\n{context}\n\nPLAYER: {question}";
+            return new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new[] { new { text = fullPrompt } }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.6,
+                    maxOutputTokens = 512
+                }
+            };
+        }
+
         var messages = new List<object>
         {
             new { role = "system", content = systemPrompt },
@@ -54,6 +86,7 @@ public sealed class CloudChatProvider : IChatProvider
         return _provider switch
         {
             "azure" => "openai/deployments/{model}/chat/completions?api-version=2024-05-01-preview".Replace("{model}", _model),
+            "gemini" => $"v1beta/models/{_model}:generateContent",
             _ => "v1/chat/completions"
         };
     }

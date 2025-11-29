@@ -20,22 +20,28 @@ public sealed class CloudEmbeddingProvider : IEmbeddingProvider
 
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken)
     {
-        var request = new
-        {
-            model = _model,
-            input = text
-        };
+        var request = _provider == "gemini"
+            ? (object)new { content = new { parts = new[] { new { text } } } }
+            : new { model = _model, input = text };
 
         using var response = await _httpClient.PostAsJsonAsync(GetPath(), request, SerializerOptions, cancellationToken);
         response.EnsureSuccessStatusCode();
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var root = document.RootElement;
+
+        if (_provider == "gemini")
+        {
+            var values = root.GetProperty("embedding").GetProperty("values")
+                .EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
+            return values;
+        }
+
         var dataElement = root.TryGetProperty("data", out var data)
             ? data[0].GetProperty("embedding")
             : root.GetProperty("embedding");
-        var values = dataElement.EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
-        return values;
+        var embeddingValues = dataElement.EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
+        return embeddingValues;
     }
 
     private string GetPath()
@@ -43,6 +49,7 @@ public sealed class CloudEmbeddingProvider : IEmbeddingProvider
         return _provider switch
         {
             "azure" => "openai/deployments/{model}/embeddings?api-version=2024-05-01-preview".Replace("{model}", _model),
+            "gemini" => $"v1beta/models/{_model}:embedContent",
             _ => "v1/embeddings"
         };
     }
