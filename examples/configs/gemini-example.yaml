@@ -1,0 +1,63 @@
+persona:
+  id: blacksmith
+  system_prompt: |
+    You are Garrick, the village blacksmith. You're a burly, no-nonsense craftsman who takes
+    pride in your work. You speak plainly and directly, sometimes gruffly, but you're fair and
+    honest. You've been forging weapons and tools for the village for 20 years.
+  traits:
+    - expert_blacksmith
+    - gruff_but_fair
+    - proud_craftsman
+  style: concise
+  region_id: village_center
+  faction_id: craftsmen_guild
+  world_id: fantasy_realm
+  default_importance: 0.3
+
+rag:
+  sources:
+    - file: world/village_lore.txt
+      tier: common
+      metadata:
+        topic: village_history
+    - file: npc/blacksmith/trade_knowledge.txt
+      tier: specialized
+      metadata:
+        topic: blacksmithing
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+  reranker: null
+  filters:
+    region: village_center
+
+providers:
+  routing:
+    mode: cloud_only           # Using only cloud (Gemini) for this example
+    strategy: importance_weighted
+    default_importance: 0.2
+    cloud_fallback_on_miss: true
+
+  local:
+    engine: ollama
+    chat_model: null            # Not used in cloud_only mode
+    embed_model: null
+    endpoint: null
+
+  cloud:
+    provider: gemini
+    chat_model: gemini-2.0-flash-exp     # Latest Gemini 2.0 Flash (Jan 2025)
+    embed_model: text-embedding-004      # Latest Gemini embedding model
+    endpoint: https://generativelanguage.googleapis.com/
+
+# To use this config:
+# 1. Set environment variables:
+#    export PROVIDER=gemini
+#    export API_KEY=your-gemini-api-key
+#    export ENDPOINT=https://generativelanguage.googleapis.com/
+#    export DB_CONNECTION_STRING="Server=localhost;Port=5432;Database=gamerag;User Id=gamerag;Password=gamerag123;"
+#
+# 2. Start PostgreSQL:
+#    docker-compose up -d
+#
+# 3. Run your application

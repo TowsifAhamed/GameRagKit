@@ -158,10 +158,11 @@ public sealed class RouterTests
     {
         var persona = Persona with { DefaultImportance = personaDefaultImportance };
 
-        return new NpcConfig(
-            persona,
-            Rag,
-            new ProvidersConfig
+        return new NpcConfig
+        {
+            Persona = persona,
+            Rag = Rag,
+            Providers = new ProvidersConfig
             {
                 Routing = new RoutingConfig
                 {
@@ -181,6 +182,7 @@ public sealed class RouterTests
                     EmbedModel = "text-embedding-3-small",
                     Endpoint = "https://api.openai.com/"
                 }
-            });
+            }
+        };
     }
 }

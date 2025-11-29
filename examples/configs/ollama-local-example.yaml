@@ -1,0 +1,68 @@
+persona:
+  id: guard
+  system_prompt: |
+    You are Marcus, a veteran guard stationed at the East Gate. You're disciplined, alert,
+    and take your duty seriously. You know every face that passes through the gate and you're
+    suspicious of strangers. You speak in short, direct sentences.
+  traits:
+    - vigilant
+    - suspicious
+    - dutiful
+  style: terse
+  region_id: east_gate
+  faction_id: city_guard
+  world_id: fantasy_realm
+  default_importance: 0.5
+
+rag:
+  sources:
+    - file: world/security_reports.txt
+      tier: specialized
+      metadata:
+        topic: security
+    - file: npc/guard/patrol_logs.txt
+      tier: specialized
+      metadata:
+        topic: surveillance
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+  reranker: null
+  filters:
+    region: east_gate
+
+providers:
+  routing:
+    mode: local_only              # Fully offline operation
+    strategy: importance_weighted
+    default_importance: 0.2
+    cloud_fallback_on_miss: false
+
+  local:
+    engine: ollama
+    chat_model: llama3.2:3b-instruct-q4_K_M  # Fast, quantized model
+    embed_model: nomic-embed-text             # High-quality embeddings
+    endpoint: http://localhost:11434
+
+  cloud:
+    provider: null
+    chat_model: null
+    embed_model: null
+    endpoint: null
+
+# To use this config (fully offline):
+# 1. Install and start Ollama:
+#    https://ollama.ai/download
+#
+# 2. Pull required models:
+#    ollama pull llama3.2:3b-instruct-q4_K_M
+#    ollama pull nomic-embed-text
+#
+# 3. Start PostgreSQL:
+#    docker-compose up -d
+#
+# 4. Set environment variables:
+#    export PROVIDER=ollama
+#    export DB_CONNECTION_STRING="Server=localhost;Port=5432;Database=gamerag;User Id=gamerag;Password=gamerag123;"
+#
+# 5. Run your application (no API key needed!)

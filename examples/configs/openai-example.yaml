@@ -1,0 +1,63 @@
+persona:
+  id: merchant
+  system_prompt: |
+    You are Lyra, a cunning merchant who runs the general store. You're chatty and friendly,
+    always looking to make a deal. You know the latest gossip and news from traveling traders.
+    You're shrewd but generally honest in your dealings.
+  traits:
+    - shrewd_negotiator
+    - gossipy
+    - well_connected
+  style: conversational
+  region_id: market_district
+  faction_id: merchants_guild
+  world_id: fantasy_realm
+  default_importance: 0.4
+
+rag:
+  sources:
+    - file: world/trade_routes.txt
+      tier: common
+      metadata:
+        topic: commerce
+    - file: world/gossip_and_rumors.txt
+      tier: common
+      metadata:
+        topic: social
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+  reranker: null
+  filters:
+    region: market_district
+
+providers:
+  routing:
+    mode: cloud_only
+    strategy: importance_weighted
+    default_importance: 0.2
+    cloud_fallback_on_miss: true
+
+  local:
+    engine: ollama
+    chat_model: null
+    embed_model: null
+    endpoint: null
+
+  cloud:
+    provider: openai
+    chat_model: gpt-4.1                  # Latest GPT-4.1 (2025) - best performance
+    embed_model: text-embedding-3-large  # Latest embedding model (3072 dims)
+    endpoint: https://api.openai.com/
+
+# To use this config:
+# 1. Set environment variables:
+#    export PROVIDER=openai
+#    export API_KEY=sk-proj-your-openai-key
+#    export ENDPOINT=https://api.openai.com/
+#    export DB_CONNECTION_STRING="Server=localhost;Port=5432;Database=gamerag;User Id=gamerag;Password=gamerag123;"
+#
+# 2. Start PostgreSQL:
+#    docker-compose up -d
+#
+# 3. Run your application

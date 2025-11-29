@@ -38,24 +38,66 @@ cd GameRagKit
 dotnet build
 ```
 
-## Repository layout
+## Repository Structure
 
 ```
-GameRagKit.sln            Solution referencing library and CLI
-src/
-  GameRagKit/             Core runtime (config parsing, vector store, router)
-  GameRagKit.Cli/         `gamerag` command-line entry point
-samples/
-  unity/                  Minimal Unity notes + starter scene placeholder
-  unreal/                 HTTP integration notes for Blueprint/C++
-docs/                     Guides for designers and integrators
+GameRagKit/
+├── src/                    # Source code
+│   ├── GameRagKit/        # Core library (config, vector store, routing, providers)
+│   └── GameRagKit.Cli/    # CLI tool (`gamerag` command)
+│
+├── tests/                  # Unit and integration tests
+│   └── GameRagKit.Tests/  # Test suite for core library
+│
+├── samples/                # Integration examples
+│   ├── unity/             # Unity integration guide and sample scripts
+│   └── unreal/            # Unreal Engine integration (C++/Blueprint examples)
+│
+├── examples/               # Ready-to-use configurations
+│   └── configs/           # Example NPC YAML files for all providers
+│       ├── gemini-example.yaml      # Google Gemini (cloud-only)
+│       ├── openai-example.yaml      # OpenAI (cloud-only)
+│       ├── ollama-local-example.yaml # Ollama (fully offline)
+│       ├── hybrid-example.yaml      # Smart routing (local + cloud)
+│       └── README.md                # Complete configuration guide
+│
+├── docs/                   # Documentation
+│   └── 2025-11-29/        # Timestamped documentation updates
+│       ├── ISSUES_AND_IMPROVEMENTS.md  # Detailed issue analysis
+│       ├── QUICK_ISSUE_SUMMARY.md      # Executive summary
+│       ├── CHANGELOG_2025-11-29.md     # What changed
+│       └── READY_TO_COMMIT.md          # Commit guide
+│
+├── docker-compose.yml      # Quick database setup (PostgreSQL/Qdrant)
+├── .env.example           # Environment variable template
+└── README.md              # This file
 ```
+
+### Where to Find What
+
+- **Getting Started?** → See [Quick Start](#getting-started) below
+- **Configuration Examples?** → [`examples/configs/`](examples/configs/)
+- **Unity Integration?** → [`samples/unity/`](samples/unity/)
+- **Unreal Integration?** → [`samples/unreal/`](samples/unreal/)
+- **Testing?** → [`tests/GameRagKit.Tests/`](tests/GameRagKit.Tests/)
+- **Issue Reports & Improvements?** → [`docs/2025-11-29/`](docs/2025-11-29/)
+
+## Quick Start
+
+**New to GameRagKit?** Check out the [example configurations](examples/configs/) for ready-to-use setups:
+- [Gemini (cloud)](examples/configs/gemini-example.yaml) - Latest Gemini 2.0/2.5 models
+- [OpenAI (cloud)](examples/configs/openai-example.yaml) - Latest GPT-4.1 models
+- [Ollama (local)](examples/configs/ollama-local-example.yaml) - Fully offline
+- [Hybrid](examples/configs/hybrid-example.yaml) - Smart routing (local + cloud)
+
+See the [complete configuration guide](examples/configs/README.md) for model details and setup instructions.
 
 ## Getting started
 
 ### 1. Install requirements
 
 - .NET 8 SDK
+- Database: PostgreSQL 16+ OR Qdrant (use included [`docker-compose.yml`](docker-compose.yml))
 - Optional: [Ollama](https://ollama.com/) with models such as `llama3.2:3b-instruct-q4_K_M` and `nomic-embed-text`
 
 ### 2. Prepare an NPC config
@@ -97,8 +139,8 @@ providers:
     endpoint: http://127.0.0.1:11434
   cloud:
     provider: openai
-    chat_model: gpt-4o-mini
-    embed_model: text-embedding-3-small
+    chat_model: gpt-4.1              # Latest GPT-4.1 (2025)
+    embed_model: text-embedding-3-large  # 3072-dim embeddings
     endpoint: https://api.openai.com/
 ```
 
@@ -220,11 +262,28 @@ Routing rules combine config defaults with per-question overrides:
 
 A `pack` command is planned for platform bundle generation.
 
-## Samples & docs
+## Documentation & Examples
 
-- `samples/unity/README.md` – outlines wiring the embedded API inside a Unity scene.
-- `samples/unreal/README.md` – shows how to call the hosted API via `HttpModule` or Blueprints.
-- `docs/designer-guide.md` – step-by-step walkthrough for writers dropping lore and testing NPCs.
+### Configuration Examples
+- **[examples/configs/](examples/configs/)** - Complete example configurations for all providers
+  - Gemini 2.0/2.5 (latest models, 2025)
+  - OpenAI GPT-4.1 (latest models, 2025)
+  - Ollama local setup (fully offline)
+  - Hybrid routing examples
+
+### Integration Samples
+- **[samples/unity/](samples/unity/)** - Unity integration guide and C# scripts
+- **[samples/unreal/](samples/unreal/)** - Unreal Engine integration (C++/Blueprint examples)
+
+### Documentation
+- **[docs/2025-11-29/](docs/2025-11-29/)** - Latest updates and issue reports
+  - [ISSUES_AND_IMPROVEMENTS.md](docs/2025-11-29/ISSUES_AND_IMPROVEMENTS.md) - Detailed analysis and recommendations
+  - [QUICK_ISSUE_SUMMARY.md](docs/2025-11-29/QUICK_ISSUE_SUMMARY.md) - Executive summary
+  - [CHANGELOG_2025-11-29.md](docs/2025-11-29/CHANGELOG_2025-11-29.md) - Recent changes
+
+### Developer Resources
+- **[.env.example](.env.example)** - Environment variable template with all providers
+- **[docker-compose.yml](docker-compose.yml)** - One-command database setup
 
 ## Roadmap
 

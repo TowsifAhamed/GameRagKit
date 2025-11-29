@@ -4,12 +4,17 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace GameRagKit.Config;
 
-public sealed record NpcConfig(PersonaConfig Persona, RagConfig Rag, ProvidersConfig Providers)
+public sealed class NpcConfig
 {
+    public PersonaConfig Persona { get; init; } = new();
+    public RagConfig Rag { get; init; } = new();
+    public ProvidersConfig Providers { get; init; } = new();
+
     public static NpcConfig LoadFromYaml(string yaml)
     {
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
             .Build();
         return deserializer.Deserialize<NpcConfig>(yaml)
                ?? throw new InvalidOperationException("Unable to parse NPC configuration.");

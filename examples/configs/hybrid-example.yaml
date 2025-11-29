@@ -1,0 +1,79 @@
+persona:
+  id: wizard
+  system_prompt: |
+    You are Aldric the Wise, a powerful wizard who serves as the village's magical advisor.
+    You speak with formal, archaic language and often reference ancient texts and prophecies.
+    You're patient with those seeking knowledge, but cryptic in your answers.
+  traits:
+    - arcane_scholar
+    - cryptic_speaker
+    - patient_teacher
+  style: formal
+  region_id: wizard_tower
+  faction_id: mages_circle
+  world_id: fantasy_realm
+  default_importance: 0.8  # Important questions go to cloud
+
+rag:
+  sources:
+    - file: world/ancient_prophecies.txt
+      tier: rare
+      metadata:
+        topic: prophecy
+        importance: high
+    - file: world/spell_lore.txt
+      tier: specialized
+      metadata:
+        topic: magic
+        importance: medium
+    - file: world/village_lore.txt
+      tier: common
+      metadata:
+        topic: general
+        importance: low
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+  reranker: null
+  filters:
+    faction: mages_circle
+
+providers:
+  routing:
+    mode: hybrid                   # Smart routing based on importance
+    strategy: importance_weighted
+    default_importance: 0.3        # Questions >= 0.3 go to cloud
+    cloud_fallback_on_miss: true   # Use cloud if local fails
+
+  local:
+    engine: ollama
+    chat_model: llama3.2:3b-instruct-q4_K_M
+    embed_model: nomic-embed-text
+    endpoint: http://localhost:11434
+
+  cloud:
+    provider: gemini
+    chat_model: gemini-2.5-pro        # Latest Gemini 2.5 Pro (2025) - most capable
+    embed_model: text-embedding-004   # Latest Gemini embedding model
+    endpoint: https://generativelanguage.googleapis.com/
+
+# To use hybrid mode:
+# 1. Set up local Ollama:
+#    ollama pull llama3.2:3b-instruct-q4_K_M
+#    ollama pull nomic-embed-text
+#
+# 2. Set environment variables for cloud:
+#    export PROVIDER=gemini
+#    export API_KEY=your-gemini-api-key
+#    export ENDPOINT=https://generativelanguage.googleapis.com/
+#    export DB_CONNECTION_STRING="Server=localhost;Port=5432;Database=gamerag;User Id=gamerag;Password=gamerag123;"
+#
+# 3. Start PostgreSQL:
+#    docker-compose up -d
+#
+# 4. Run your application
+#
+# How routing works:
+# - Trivial questions (importance < 0.3): Answered locally with Ollama (free, fast)
+# - Important questions (importance >= 0.3): Sent to Gemini (paid, high quality)
+# - If local model fails: Falls back to cloud automatically
