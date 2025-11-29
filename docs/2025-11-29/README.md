@@ -6,6 +6,14 @@ This directory contains comprehensive documentation for the GameRagKit bug fix a
 
 ## What's in This Directory
 
+### [PROVIDER_COMPATIBILITY.md](PROVIDER_COMPATIBILITY.md)
+**Cloud Provider Compatibility Guide**
+- Complete list of supported providers (OpenAI, Azure, Gemini, Groq, OpenRouter, Mistral)
+- Which providers are NOT supported (Anthropic/Claude, Cohere) and why
+- Implementation details and API format differences
+- Model names, endpoints, and environment variables for each provider
+- Testing instructions and FAQ
+
 ### [CHANGELOG_2025-11-29.md](CHANGELOG_2025-11-29.md)
 **Quick Summary of Changes**
 - What was fixed (critical YAML deserialization bug)
@@ -20,6 +28,7 @@ This directory contains comprehensive documentation for the GameRagKit bug fix a
 - All 7 issues found (1 critical, 6 documentation gaps)
 - Concrete recommendations for future improvements
 - Testing checklist for releases
+- Provider compatibility matrix
 
 ### [QUICK_ISSUE_SUMMARY.md](QUICK_ISSUE_SUMMARY.md)
 **Executive Summary** (TL;DR version)

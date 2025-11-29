@@ -90,7 +90,9 @@ public sealed record LocalProviderConfig
 
 public sealed record CloudProviderConfig
 {
-    public string Provider { get; init; } = "openai"; // openai | azure | mistral | gemini | hf
+    // Supported providers: openai, azure, gemini, groq, openrouter, mistral
+    // Note: anthropic/claude and cohere are NOT supported (different API formats)
+    public string Provider { get; init; } = "openai";
     public string? ChatModel { get; init; }
         = null;
     public string? EmbedModel { get; init; }

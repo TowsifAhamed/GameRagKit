@@ -7,7 +7,7 @@
 GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for building non-player characters (NPCs) that can scale from solo prototypes to fully-fledged productions. It keeps the runtime lightweight enough for Unity or dedicated C# services, while still letting you route high-impact scenes to cloud LLMs on demand.
 
 - **Engine agnostic.** Embed the library directly in Unity/other C# runtimes or host the bundled HTTP service for Unreal and everything else.
-- **Provider agnostic.** Run Ollama/LLamaSharp locally, route to OpenAI/Azure/Mistral/Gemini/HuggingFace, or mix them with hybrid routing.
+- **Provider agnostic.** Run Ollama locally, route to OpenAI/Azure/Gemini/Groq/OpenRouter/Mistral, or mix them with hybrid routing. See [Provider Compatibility](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) for full details.
 - **Designer friendly.** Personas live in YAML, lore lives in folders, and the CLI handles ingestion, chat smoke tests, and packaging.
 
 > Dual-licensed: PolyForm Noncommercial 1.0.0 for community use with commercial terms available from the author.
@@ -77,6 +77,7 @@ GameRagKit/
 
 - **Getting Started?** → See [Quick Start](#getting-started) below
 - **Configuration Examples?** → [`examples/configs/`](examples/configs/)
+- **Provider Compatibility?** → [Provider Compatibility Guide](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) - Which cloud providers are supported?
 - **Unity Integration?** → [`samples/unity/`](samples/unity/)
 - **Unreal Integration?** → [`samples/unreal/`](samples/unreal/)
 - **Testing?** → [`tests/GameRagKit.Tests/`](tests/GameRagKit.Tests/)
@@ -277,6 +278,7 @@ A `pack` command is planned for platform bundle generation.
 
 ### Documentation
 - **[docs/2025-11-29/](docs/2025-11-29/)** - Latest updates and issue reports
+  - [PROVIDER_COMPATIBILITY.md](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) - Which cloud providers are supported?
   - [ISSUES_AND_IMPROVEMENTS.md](docs/2025-11-29/ISSUES_AND_IMPROVEMENTS.md) - Detailed analysis and recommendations
   - [QUICK_ISSUE_SUMMARY.md](docs/2025-11-29/QUICK_ISSUE_SUMMARY.md) - Executive summary
   - [CHANGELOG_2025-11-29.md](docs/2025-11-29/CHANGELOG_2025-11-29.md) - Recent changes

@@ -40,10 +40,31 @@ providers:        # LLM and embedding providers
     chat_model: "..."
     embed_model: "..."
   cloud:
-    provider: openai|gemini|azure|mistral|hf
+    provider: openai|gemini|azure|groq|openrouter|mistral
     chat_model: "..."
     embed_model: "..."
 ```
+
+## Supported Cloud Providers
+
+GameRagKit supports the following cloud providers:
+
+| Provider | Status | API Format | Notes |
+|----------|--------|------------|-------|
+| **OpenAI** | ✅ Fully Supported | OpenAI-compatible | gpt-4.1, gpt-4o, etc. |
+| **Azure OpenAI** | ✅ Fully Supported | OpenAI-compatible | Enterprise deployments |
+| **Google Gemini** | ✅ Fully Supported | Gemini-specific | gemini-2.0-flash-exp, gemini-2.5-pro |
+| **Groq** | ✅ Fully Supported | OpenAI-compatible | Fast inference |
+| **OpenRouter** | ✅ Fully Supported | OpenAI-compatible | Multi-provider aggregator |
+| **Mistral AI** | ✅ Fully Supported | OpenAI-compatible | mistral-large, etc. |
+| **Anthropic/Claude** | ❌ Not Supported | Different format | Requires separate implementation |
+| **Cohere** | ❌ Not Supported | Different format | Requires separate implementation |
+
+### Implementation Details
+
+- **OpenAI-compatible providers** (OpenAI, Azure, Groq, OpenRouter, Mistral) use the standard `/v1/chat/completions` and `/v1/embeddings` endpoints
+- **Gemini** uses Google's custom `/v1beta/models/{model}:generateContent` and `:embedContent` endpoints
+- **Anthropic and Cohere** use different API structures and are not currently supported
 
 ## Provider Details
 

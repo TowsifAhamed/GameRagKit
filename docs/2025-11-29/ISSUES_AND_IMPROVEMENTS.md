@@ -136,17 +136,28 @@ volumes:
 - Valid model names not documented per provider
 - Endpoint formats unclear
 
-**Recommendation:**
-Add a table like this to README:
+**Status:** ✅ **FIXED** - Added comprehensive provider documentation with compatibility matrix.
 
-| Provider | `provider` value | Example `chat_model` | Example `embed_model` | `endpoint` Format |
-|----------|------------------|----------------------|----------------------|-------------------|
-| OpenAI   | `openai`         | `gpt-4o`             | `text-embedding-3-small` | `https://api.openai.com/` |
-| Gemini   | `gemini`         | `gemini-1.5-flash`   | `embedding-001`      | `https://generativelanguage.googleapis.com/` |
-| Azure    | `azure`          | `gpt-4`              | `text-embedding-ada-002` | `https://<resource>.openai.azure.com/` |
-| Mistral  | `mistral`        | `mistral-large`      | `mistral-embed`      | `https://api.mistral.ai/` |
-| HuggingFace | `hf`          | `<model-id>`         | `<embedding-model-id>` | `https://api-inference.huggingface.co/` |
-| Ollama   | `ollama`         | `llama3`             | `nomic-embed-text`   | `http://localhost:11434` |
+**Supported Providers (as of 2025-11-29):**
+
+| Provider | `provider` value | API Format | Example `chat_model` | Example `embed_model` | `endpoint` Format |
+|----------|------------------|------------|----------------------|----------------------|-------------------|
+| OpenAI   | `openai`         | OpenAI-compatible | `gpt-4.1`, `gpt-4o` | `text-embedding-3-large` | `https://api.openai.com/` |
+| Azure OpenAI | `azure`      | OpenAI-compatible | `gpt-4` | `text-embedding-ada-002` | `https://<resource>.openai.azure.com/` |
+| Gemini   | `gemini`         | Gemini-specific | `gemini-2.0-flash-exp`, `gemini-2.5-pro` | `text-embedding-004` | `https://generativelanguage.googleapis.com/` |
+| Groq     | `groq`           | OpenAI-compatible | `llama-3.1-70b` | N/A | `https://api.groq.com/` |
+| OpenRouter | `openrouter`   | OpenAI-compatible | Any supported model | N/A | `https://openrouter.ai/api/` |
+| Mistral  | `mistral`        | OpenAI-compatible | `mistral-large` | `mistral-embed` | `https://api.mistral.ai/` |
+| Ollama (local) | `ollama`   | Ollama API | `llama3.2:3b-instruct-q4_K_M` | `nomic-embed-text` | `http://localhost:11434` |
+
+**NOT Supported:**
+- ❌ Anthropic/Claude - Uses different API format (requires separate implementation)
+- ❌ Cohere - Uses different API format (requires separate implementation)
+
+**Implementation Notes:**
+- OpenAI-compatible providers use `/v1/chat/completions` and `/v1/embeddings` endpoints
+- Gemini uses custom `/v1beta/models/{model}:generateContent` and `:embedContent` endpoints
+- Added Gemini support in commit edb1577 (2025-11-29)
 
 ### 4. Environment Variables Not Consolidated
 
