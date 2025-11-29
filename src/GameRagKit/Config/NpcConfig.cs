@@ -25,7 +25,7 @@ public sealed record PersonaConfig
 {
     public string Id { get; init; } = string.Empty;
     public string SystemPrompt { get; init; } = string.Empty;
-    public IReadOnlyList<string> Traits { get; init; } = Array.Empty<string>();
+    public List<string> Traits { get; init; } = new();
     public string? Style { get; init; }
         = "concise";
     public string? RegionId { get; init; }
@@ -40,7 +40,8 @@ public sealed record PersonaConfig
 
 public sealed record RagConfig
 {
-    public IReadOnlyList<SourceConfig> Sources { get; init; } = Array.Empty<SourceConfig>();
+    public List<SourceConfig> Sources { get; init; } = new();
+
     public int ChunkSize { get; init; } = 450;
     public int Overlap { get; init; } = 60;
     public int TopK { get; init; } = 4;
