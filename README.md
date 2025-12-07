@@ -93,6 +93,17 @@ GameRagKit/
 
 See the [complete configuration guide](examples/configs/README.md) for model details and setup instructions.
 
+## Demo Application
+
+Want to see GameRagKit in action? Check out the **[GameRagKit Demo](https://github.com/TowsifAhamed/gameragkit-demo)** - a working example application that demonstrates:
+
+- Real-world NPC conversation implementation
+- Integration with the GameRagKit HTTP service
+- Complete setup with sample NPCs and lore
+- Ready-to-run example for testing and experimentation
+
+The demo repository is a great way to quickly understand how GameRagKit works before integrating it into your own game.
+
 ## Getting started
 
 ### 1. Install requirements
