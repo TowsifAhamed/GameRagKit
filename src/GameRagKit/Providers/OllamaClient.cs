@@ -101,7 +101,7 @@ public sealed class OllamaClient : IChatProvider, IEmbeddingProvider
         var payload = new
         {
             model = _embedModel,
-            input = text
+            prompt = text
         };
 
         using var response = await _httpClient.PostAsJsonAsync("/api/embeddings", payload, SerializerOptions, ct).ConfigureAwait(false);

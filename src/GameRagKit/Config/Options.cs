@@ -39,7 +39,7 @@ public sealed class DatabaseOptions
             connectionString = "Host=localhost;Port=5432;Username=rag;Password=rag;Database=gamerag";
         }
 
-        var embeddingDims = ParseInt(Environment.GetEnvironmentVariable("EMBED_DIM") ?? Environment.GetEnvironmentVariable("EMBED_DIMS"), 1536);
+        var embeddingDims = ParseInt(Environment.GetEnvironmentVariable("EMBED_DIMS"), 1536);
         var grpcPort = ParseInt(Environment.GetEnvironmentVariable("QDRANT_GRPC_PORT"), 6334);
 
         return new DatabaseOptions

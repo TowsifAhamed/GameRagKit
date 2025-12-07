@@ -236,7 +236,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
     private async Task<bool> TableExistsAsync(NpgsqlConnection connection, CancellationToken ct)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT to_regclass(@tableName)";
+        command.CommandText = "SELECT to_regclass(@tableName)::text";
         command.Parameters.AddWithValue("tableName", _tableName);
         var result = await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
         return result is not null && result is not DBNull;
