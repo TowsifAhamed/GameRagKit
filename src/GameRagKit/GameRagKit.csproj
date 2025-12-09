@@ -17,6 +17,8 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Copyright>Copyright (c) 2025 Towsif Ahamed</Copyright>
+    <Version>0.1.0</Version>
+    <PackageVersion>0.1.0</PackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="YamlDotNet" Version="15.1.2" />

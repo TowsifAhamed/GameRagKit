@@ -249,7 +249,7 @@ export DB_CONNECTION_STRING="Server=localhost;Port=5432;Database=gamerag;User Id
 ## Troubleshooting
 
 **"Cannot create an instance of type NpcConfig"**
-- Update GameRagKit to version `0.0.0-ci.3` or later
+- Update GameRagKit to version `0.1.0` or later
 
 **"Connection refused" on database**
 - Ensure Docker is running: `docker ps`

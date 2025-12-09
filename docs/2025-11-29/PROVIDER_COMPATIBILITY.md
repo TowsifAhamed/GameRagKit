@@ -1,7 +1,7 @@
 # Cloud Provider Compatibility Guide
 
-**Last Updated:** 2025-11-29
-**GameRagKit Version:** 0.0.0-ci.4+
+**Last Updated:** 2025-12-09
+**GameRagKit Version:** 0.1.0 (stable) / 0.1.0-ci.* (CI builds)
 
 ---
 
@@ -335,9 +335,25 @@ Check the provider's documentation:
 
 ## Version History
 
-- **2025-11-29 (v0.0.0-ci.4):** Added Gemini support with custom endpoint handling
-- **2025-11-29 (v0.0.0-ci.3):** Fixed YAML deserialization bug
-- **Earlier:** OpenAI, Azure, Groq, OpenRouter, Mistral support
+### CI Build Versions (0.0.0-ci.*)
+- **v0.0.0-ci.8 (d160fa7)** - 2025-12-08: Added demo screenshots to README
+- **v0.0.0-ci.7 (694eca0)** - 2025-12-07: Fixed multiple provider and database bugs
+- **v0.0.0-ci.6 (ae15659)** - 2025-11-29: Gemini API Key Authentication Bug - FIXED
+- **v0.0.0-ci.5 (a012466)** - 2025-11-29: Updates on CloudProviderConfig and documents
+- **v0.0.0-ci.4 (edb1577)** - 2025-11-29: Add Gemini provider support
+- **v0.0.0-ci.3 (a6ebc12)** - 2025-11-29: Fix YAML deserialization for collection types
+- **v0.0.0-ci.2 (9bb33d7)** - 2025-11-29: Fix critical YAML deserialization bug (records to classes)
+- **v0.0.0-ci.1 (93f34ac)** - 2025-11-29: README NuGet update
+
+### Stable Releases
+- **v0.1.0** - 2025-12-09 (pending): First stable release; CI builds continue as `0.1.0-ci.*`
+
+### Pre-CI Milestones
+- **2025-11-29 (6bf7d0b):** Configure NuGet publishing with automatic CI/CD
+- **2025-11-15:** Unity and Unreal Engine integration documentation
+- **2025-11-09:** Streaming endpoint `/ask/stream` and importance-based routing
+- **2025-11-01:** Qdrant filter fixes for collection scopes
+- **2025-10-28:** Initial release with OpenAI, Azure, Groq, OpenRouter, Mistral support
 
 ---
 

@@ -193,20 +193,33 @@ This repository has **automatic CI/CD configured**. When you push:
 - Only internal instantiation changed
 - Existing code will work without modifications
 
-### Version Recommendation
-Current: `0.0.0-ci.*` (pre-release)
-**Suggested:** Publish as `v0.1.0` (first stable release)
+### Version Status
+**Current:** `0.0.0-ci.8` - Last pre-release CI build (Dec 8, 2025)
+**Next Release:** `0.1.0` - First stable release (Dec 9, 2025)
+**CI Build History:** `0.0.0-ci.1` through `0.0.0-ci.8` (Nov 29 - Dec 8, 2025)
+  - ci.1: README NuGet update
+  - ci.2: Critical YAML bug fix (records → classes)
+  - ci.3: YAML collection types fix
+  - ci.4: Gemini provider support
+  - ci.5: CloudProviderConfig updates
+  - ci.6: Gemini auth bug fix
+  - ci.7: Multiple provider/database fixes
+  - ci.8: Demo screenshots
+**After This Commit:** CI builds will use `0.1.0-ci.*` format
+**Next Steps:** Tag `v0.1.0` for stable package publication
 
 ---
 
 ## 🙏 Credits
 
 **Tested by:** User + AI Assistant
-**Date:** 2025-11-29
+**Date:** 2025-11-29 to 2025-12-09
 **Issues Found:** 7 (1 critical, 6 documentation)
-**Issues Fixed:** 1 critical + all documentation
-**Tests Added:** 0 (existing 16 tests all pass)
+**Issues Fixed:** 1 critical + all documentation + provider/database bugs
+**Features Added:** Gemini provider support, demo screenshots
+**Tests Status:** All 16 tests pass
 **Examples Added:** 4 complete configurations
+**Release:** v0.1.0 - First stable release
 
 ---
 

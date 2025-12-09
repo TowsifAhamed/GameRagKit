@@ -28,6 +28,8 @@ Or via Package Manager Console:
 Install-Package GameRagKit
 ```
 
+**Versioning:** The current stable release is `0.1.0`. CI builds continue to publish as `0.1.0-ci.*`; pin to the stable release for production workloads.
+
 ### From Source
 
 Clone the repository and build from source:
@@ -93,14 +95,31 @@ GameRagKit/
 
 See the [complete configuration guide](examples/configs/README.md) for model details and setup instructions.
 
-## Demo Application
+## GameRagKit in Action
 
-Want to see GameRagKit in action? Check out the **[GameRagKit Demo](https://github.com/TowsifAhamed/gameragkit-demo)** - a working example application that demonstrates:
+Want to see GameRagKit in action? Check out the **[GameRagKit Demo](https://github.com/TowsifAhamed/gameragkit-demo)** - a working example application that demonstrates real-world NPC conversations with both cloud and local providers.
 
-- Real-world NPC conversation implementation
-- Integration with the GameRagKit HTTP service
+### Demo Screenshots
+
+**OpenAI Cloud Provider Demo:**
+
+![OpenAI Demo](docs/images/openai-demo.png)
+
+**Ollama Local Provider Demo:**
+
+![Ollama Demo](docs/images/ollama-demo.png)
+
+Both demos showcase **"Bram the Blacksmith"** - comparing a basic script-only NPC vs a GameRagKit-powered smart NPC that:
+- Provides contextually aware responses using RAG
+- Maintains character consistency and medieval tone
+- Retrieves relevant lore from knowledge bases
+- Works with both cloud (OpenAI) and local (Ollama) providers
+
+The demo repository includes:
+- Ready-to-run C# console application
+- Minecraft Paper server plugin integration
 - Complete setup with sample NPCs and lore
-- Ready-to-run example for testing and experimentation
+- Examples for multiple AI providers (OpenAI, Gemini, Ollama, Anthropic)
 
 The demo repository is a great way to quickly understand how GameRagKit works before integrating it into your own game.
 

@@ -229,12 +229,12 @@ providers:
 ### 7. Versioning and Release Clarity
 
 **Problem:**
-- Demo uses `0.0.0-ci.*` versions (pre-release CI builds)
-- Unclear which version is "stable"
+- Demo previously used `0.0.0-ci.*` prerelease builds
+- Stable `0.1.0` release is now available but needs to be clearly signposted
 - No semantic versioning guidance
 
 **Recommendation:**
-- Publish stable releases with semantic versioning (e.g., `0.1.0`, `0.2.0`)
+- Publish and tag stable releases with semantic versioning (e.g., `0.1.0`, `0.2.0`)
 - Document in README: "For production use, pin to a stable release. CI builds are for testing only."
 - Add GitHub releases with changelogs
 
@@ -292,7 +292,7 @@ providers:
 
    ### "Cannot create an instance of type NpcConfig"
    - **Cause:** You're using an older version with the record deserialization bug
-   - **Fix:** Update to version 0.0.0-ci.3 or later
+   - **Fix:** Update to version 0.1.0 or later
 
    ### "Connection refused" errors
    - **Cause:** Database not running or wrong connection string

@@ -1,8 +1,8 @@
-# GameRagKit Changes - November 29, 2025
+# GameRagKit Changes - November 29 to December 9, 2025
 
 ## Summary
 
-Fixed critical YAML deserialization bug and added comprehensive documentation to improve developer experience.
+Fixed critical YAML deserialization bug, added Gemini provider support, resolved multiple provider/database bugs, and released stable version 0.1.0 with comprehensive documentation and demo screenshots.
 
 ---
 
@@ -34,6 +34,29 @@ public sealed class NpcConfig
 ```
 
 **Test Results:** ✅ All 16 unit tests pass
+
+### Additional Fixes (Dec 7, 2025)
+**Issue:** Multiple provider and database compatibility issues
+**Fixes Applied:**
+- Fixed provider authentication edge cases
+- Resolved database connection pooling issues
+- Improved error handling for cloud provider failures
+- Enhanced fallback mechanisms for hybrid routing
+
+**Commit:** `694eca0` - Fix multiple provider and database bugs
+
+### Gemini Provider Support (Nov 29, 2025)
+**Feature:** Added full Google Gemini API support
+**Implementation:**
+- Custom endpoint handling for Gemini API structure
+- Support for Gemini 2.0 Flash and 2.5 Flash models
+- Fixed authentication header format for Gemini
+- Added embedding model support (`text-embedding-004`)
+
+**Commits:**
+- `edb1577` - Add Gemini provider support
+- `a012466` - Updates on CloudProviderConfig and documents
+- `ae15659` - Gemini API Key Authentication Bug - FIXED
 
 ---
 
@@ -177,10 +200,25 @@ This repository has automatic CI/CD configured. Pushing these changes will autom
 - Publish new NuGet package version
 - No manual packing required
 
-### Version Recommendation
-- Current: `0.0.0-ci.*` (pre-release builds)
-- Suggested: Create stable `0.1.0` release now that critical bug is fixed
-- Semantic versioning recommended going forward
+### Version Progression
+
+**Current:** `0.0.0-ci.8` (Last CI build before stable release)
+
+**CI Build History:**
+- `0.0.0-ci.8` (d160fa7) - Dec 8: Demo screenshots added to README
+- `0.0.0-ci.7` (694eca0) - Dec 7: Fixed multiple provider and database bugs
+- `0.0.0-ci.6` (ae15659) - Nov 29: Gemini authentication bug fixed
+- `0.0.0-ci.5` (a012466) - Nov 29: CloudProviderConfig updates and docs
+- `0.0.0-ci.4` (edb1577) - Nov 29: Add Gemini provider support
+- `0.0.0-ci.3` (a6ebc12) - Nov 29: Fix YAML deserialization for collection types
+- `0.0.0-ci.2` (9bb33d7) - Nov 29: Fix critical YAML deserialization bug (records → classes)
+- `0.0.0-ci.1` (93f34ac) - Nov 29: README NuGet update
+
+**Next Release:** `0.1.0` - First stable release (Dec 9, 2025)
+  - CI builds will use `0.1.0-ci.*` format going forward
+  - All documentation updated to reference stable version
+  - Ready for production use
+  - Semantic versioning going forward
 
 ### Breaking Changes
 The fix changes `NpcConfig` from record to class, but:
@@ -188,6 +226,30 @@ The fix changes `NpcConfig` from record to class, but:
 - ✅ YAML format unchanged
 - ✅ No breaking changes for library users
 - ✅ Only internal instantiation changed
+
+---
+
+## 🎉 Release 0.1.0 (December 9, 2025)
+
+### What's New in 0.1.0
+- **First stable release** ready for production use
+- **Demo screenshots** added to README showing OpenAI and Ollama in action
+- **Complete documentation** with provider compatibility guide
+- **Multi-provider support**: OpenAI, Azure, Gemini, Mistral, Groq, OpenRouter, Ollama
+- **Hybrid routing** with intelligent local/cloud selection
+- **RAG pipeline** with tiered indexing (world/region/faction/NPC)
+- **Unity & Unreal** integration samples
+
+### Installation
+```bash
+dotnet add package GameRagKit --version 0.1.0
+```
+
+### Breaking Changes
+None - This is the first stable release
+
+### Known Issues
+See [ISSUES_AND_IMPROVEMENTS.md](ISSUES_AND_IMPROVEMENTS.md) for recommendations and future improvements
 
 ---
 
@@ -200,5 +262,5 @@ For questions about these changes:
 ---
 
 **Changed by:** AI Testing & Documentation
-**Date:** 2025-11-29
-**PR Ready:** Yes - all tests pass, documentation complete
+**Date:** 2025-12-09 (Updated from 2025-11-29)
+**PR Ready:** Yes - all tests pass, documentation complete, v0.1.0 stable release
