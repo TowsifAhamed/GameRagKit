@@ -28,7 +28,7 @@ Or via Package Manager Console:
 Install-Package GameRagKit
 ```
 
-**Versioning:** The current stable release is `0.1.0`. CI builds continue to publish as `0.1.0-ci.*`; pin to the stable release for production workloads.
+**Versioning:** Each push to `main` automatically publishes a new version with an auto-incremented patch number (e.g., 0.1.1, 0.1.2, etc.). To publish a specific version, push a tag like `v0.2.0` which will publish exactly as `0.2.0`.
 
 ### From Source
 
@@ -103,11 +103,11 @@ Want to see GameRagKit in action? Check out the **[GameRagKit Demo](https://gith
 
 **OpenAI Cloud Provider Demo:**
 
-![OpenAI Demo](docs/images/openai-demo.png)
+![OpenAI Demo](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/docs/images/openai-demo.png)
 
 **Ollama Local Provider Demo:**
 
-![Ollama Demo](docs/images/ollama-demo.png)
+![Ollama Demo](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/docs/images/ollama-demo.png)
 
 Both demos showcase **"Bram the Blacksmith"** - comparing a basic script-only NPC vs a GameRagKit-powered smart NPC that:
 - Provides contextually aware responses using RAG

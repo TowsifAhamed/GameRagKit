@@ -46,14 +46,17 @@ jobs:
       - name: Test
         run: dotnet test GameRagKit.sln -c Release --no-build
 
-      - name: Compute package version
+      - name: Get package version
         id: version
         shell: bash
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
           else
-            echo "value=0.1.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+            base_version=$(grep -oP '<Version>\K[^<]+' src/GameRagKit/GameRagKit.csproj | head -1)
+            IFS='.' read -r major minor patch <<< "$base_version"
+            new_patch=$((patch + GITHUB_RUN_NUMBER))
+            echo "value=${major}.${minor}.${new_patch}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Pack GameRagKit
