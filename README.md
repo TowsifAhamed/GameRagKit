@@ -12,6 +12,15 @@ GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for buildin
 
 > Dual-licensed: PolyForm Noncommercial 1.0.0 for community use with commercial terms available from the author.
 
+## Donate (optional)
+
+If you’d like to support development, you can donate via WiseTag:
+
+- WiseTag: `@towsifa8`
+- Donations are used to build AI-enhanced mods for existing games (bringing smarter NPC experiences) and to improve GameRAGKit.
+
+<img src="https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/wisetag.png" alt="WiseTag donation QR (@towsifa8)" width="220" />
+
 ## Installation
 
 ### NuGet Package
@@ -327,3 +336,5 @@ A `pack` command is planned for platform bundle generation.
 ## License
 
 PolyForm Noncommercial 1.0.0 (community use) + commercial license – see [LICENSE.md](LICENSE.md).
+
+Commercial licensing: email `towsif.kuet.ac.bd@gmail.com` (we keep terms lightweight and primarily ask for recognition/attribution).

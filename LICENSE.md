@@ -19,6 +19,9 @@ GameRAGKit is **dual-licensed**:
    For **any commercial use** (including internal business use, production, or providing the Software as a service),
    you must obtain a separate commercial license from the Licensor.
 
+   We keep commercial licensing lightweight — we’re not chasing big sums. We mainly want clear recognition
+   (e.g., attribution in credits/docs and/or a note in your OSS/compliance page) that the industry is using GameRAGKit.
+
    → **Contact:** Towsif Ahamed <towsif.kuet.ac.bd@gmail.com>  
    → **File:** `COMMERCIAL-LICENSE.md` (terms supplied by the Licensor on request or via Order Form)
 
