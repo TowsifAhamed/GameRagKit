@@ -1,7 +1,6 @@
 # GameRAGKit
 
-![Discord member count](https://img.shields.io/discord/1453102384334241856?logo=discord&logoColor=white)
-
+[![Discord member count](https://img.shields.io/discord/1453102384334241856?logo=discord&logoColor=purple)](https://discord.gg/CmYuMVWGZm)
 [![NuGet](https://img.shields.io/nuget/v/GameRagKit.svg)](https://www.nuget.org/packages/GameRagKit/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/GameRagKit.svg)](https://www.nuget.org/packages/GameRagKit/)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE.md)
