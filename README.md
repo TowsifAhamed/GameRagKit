@@ -25,6 +25,19 @@ If you’d like to support development, you can donate via WiseTag:
 
 - Add on to the Discord channel: [https://discord.gg/CmYuMVWGZm](https://discord.gg/CmYuMVWGZm)
 
+<p align="center">
+  <iframe
+    src="https://discord.com/widget?id=1453102384334241856&theme=dark"
+    width="350"
+    height="500"
+    allowtransparency="true"
+    frameborder="0"
+    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts">
+  </iframe>
+</p>
+
+![Discord member count](https://img.shields.io/discord/1453102384334241856?logo=discord&logoColor=white)
+
 ## Installation
 
 ### NuGet Package
@@ -135,6 +148,14 @@ The demo repository includes:
 - Examples for multiple AI providers (OpenAI, Gemini, Ollama, Anthropic)
 
 The demo repository is a great way to quickly understand how GameRagKit works before integrating it into your own game.
+
+## Release highlights
+
+- **LLamaSharp in-process inference** lets you skip Ollama entirely, run fully offline inside your game server, and point `model_path`/`embed_model_path` at the GGUF files you own.
+- **Token-by-token streaming** is live across SDKs and HTTP: use `NpcAgent.StreamAsync`, `/ask/stream` (SSE), or the CLI chat command to watch cinematic, partial responses roll in.
+- **Pack builder CLI** (`gamerag pack`) plus the [shipping guide](docs/shipping-to-players.md) produce deployable Lore + `.gamerag` bundles for consoles or locked-down servers.
+- **Runtime state snapshots** (`AskOptions.State`, `WriteSnapshot`) inject transient facts (pressures, morale, timers) so NPCs reason about the current run without polluting the persistent index.
+- **Systems assistant example** (`examples/systems-assistant/`) shows supply-chain debugging in action, blending world/region/faction lore with live `RUNTIME STATE` for grounded, actionable answers.
 
 ## Systems Assistant ("Rage Chat")
 
@@ -360,10 +381,10 @@ Routing rules combine config defaults with per-question overrides:
 
 ## Roadmap
 
-- LLamaSharp local provider for purely in-process inference (available without HTTP)
-- Streaming responses via SSE/WebSockets for cinematic scenes
-- Advanced router strategies (latency, budget, dynamic confidence)
-- Index packing for platform deploys
+- Advanced router strategies (latency, budget, dynamic confidence) that balance responsiveness with cloud spend.
+- In-memory vector store option for ultra-fast prototyping and scenarios that skip external databases.
+- More actionable diagnostics around YAML/provider configuration so errors directly point to the offending section.
+- Expanded integration tests (systems assistant, streaming, pack builder) to guard regressions across providers and runtimes.
 
 ## License
 
