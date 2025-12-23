@@ -6,6 +6,7 @@ public sealed record AskOptions(
     string? SystemOverride = null,
     double Importance = double.NaN,
     bool ForceLocal = false,
-    bool ForceCloud = false);
+    bool ForceCloud = false,
+    string? State = null);
 
 public sealed record AgentReply(string Text, string[] Sources, double[] Scores, bool FromCloud);

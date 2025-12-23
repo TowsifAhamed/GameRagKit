@@ -17,7 +17,14 @@ public sealed class ProviderResolver
         var engine = runtimeOptions.LocalEngine ?? config.Providers.Local.Engine ?? "ollama";
         if (string.Equals(engine, "llamasharp", StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult<IChatProvider?>(new LLamaSharpClient());
+            var modelPath = runtimeOptions.LocalModelPath ?? config.Providers.Local.ModelPath;
+            if (string.IsNullOrWhiteSpace(modelPath))
+            {
+                return Task.FromResult<IChatProvider?>(new LLamaSharpClient());
+            }
+
+            var llamaOptions = BuildLLamaOptions(config.Providers.Local, runtimeOptions, modelPath);
+            return Task.FromResult<IChatProvider?>(new LLamaSharpClient(llamaOptions));
         }
 
         var endpoint = runtimeOptions.LocalEndpoint ?? config.Providers.Local.Endpoint;
@@ -42,7 +49,14 @@ public sealed class ProviderResolver
         var engine = runtimeOptions.LocalEngine ?? config.Providers.Local.Engine ?? "ollama";
         if (string.Equals(engine, "llamasharp", StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult<IEmbeddingProvider?>(new LLamaSharpClient());
+            var modelPath = runtimeOptions.LocalModelPath ?? config.Providers.Local.ModelPath;
+            if (string.IsNullOrWhiteSpace(modelPath))
+            {
+                return Task.FromResult<IEmbeddingProvider?>(new LLamaSharpClient());
+            }
+
+            var llamaOptions = BuildLLamaOptions(config.Providers.Local, runtimeOptions, modelPath);
+            return Task.FromResult<IEmbeddingProvider?>(new LLamaSharpClient(llamaOptions));
         }
 
         var endpoint = runtimeOptions.LocalEndpoint ?? config.Providers.Local.Endpoint;
@@ -134,5 +148,25 @@ public sealed class ProviderResolver
         };
 
         return new OllamaClient(httpClient, chatModel, embedModel);
+    }
+
+    private static LLamaSharpOptions BuildLLamaOptions(
+        LocalProviderConfig localConfig,
+        ProviderRuntimeOptions runtimeOptions,
+        string modelPath)
+    {
+        return new LLamaSharpOptions
+        {
+            ModelPath = modelPath,
+            EmbedModelPath = runtimeOptions.LocalEmbedModelPath ?? localConfig.EmbedModelPath ?? modelPath,
+            ContextSize = runtimeOptions.LocalContextSize ?? localConfig.ContextSize,
+            EmbeddingContextSize = runtimeOptions.LocalEmbeddingContextSize ?? localConfig.EmbeddingContextSize,
+            GpuLayerCount = runtimeOptions.LocalGpuLayerCount ?? localConfig.GpuLayerCount,
+            Threads = runtimeOptions.LocalThreads ?? localConfig.Threads,
+            BatchThreads = runtimeOptions.LocalBatchThreads ?? localConfig.BatchThreads,
+            BatchSize = runtimeOptions.LocalBatchSize ?? localConfig.BatchSize,
+            MicroBatchSize = runtimeOptions.LocalMicroBatchSize ?? localConfig.MicroBatchSize,
+            MaxTokens = runtimeOptions.LocalMaxTokens ?? localConfig.MaxTokens,
+        };
     }
 }

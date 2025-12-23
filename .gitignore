@@ -6,3 +6,25 @@ obj/
 *.csproj.user
 .gamerag/
 *.DS_Store
+
+# Environment variables and secrets
+.env
+.env.local
+.env.test
+*.env
+
+# Local testing documentation and scripts
+LOCAL_TESTING.md
+TESTING_SETUP.md
+COMMIT_SUMMARY.md
+FINAL_TEST_REPORT.md
+QUICK_TEST_GUIDE.md
+TEST_RESULTS.md
+tests/TEST_SUMMARY.md
+START_POSTGRES.sh
+validate_setup.sh
+
+# Test implementations (optional for users)
+tests/GameRagKit.Tests/Cli/
+tests/GameRagKit.Tests/Providers/
+tests/GameRagKit.Tests/VectorStores/

@@ -132,6 +132,16 @@ The demo repository includes:
 
 The demo repository is a great way to quickly understand how GameRagKit works before integrating it into your own game.
 
+## Systems Assistant ("Rage Chat")
+
+Ship a drop-in "what broke?" assistant for supply chains, happiness loops, or any system-by-system debugging. Try the starter kit in [`examples/systems-assistant/`](examples/systems-assistant/) which includes world/region/faction lore, a live snapshot, and five canned questions.
+
+1. `dotnet run --project src/GameRagKit.Cli/GameRagKit.Cli.csproj -- ingest examples/systems-assistant`
+2. `dotnet run --project src/GameRagKit.Cli/GameRagKit.Cli.csproj -- serve --config examples/systems-assistant`
+3. POST `{"npc":"systems-guide","question":"Why are citizens angry about food?"}` to `/ask` or stream partial text via `/ask/stream`.
+
+Answers blend world/region/faction lore with the current run's `RUNTIME STATE` so frustrated players get grounded, actionable fixes with citations.
+
 ## Getting started
 
 ### 1. Install requirements
@@ -189,6 +199,21 @@ providers:
 ```
 # Local defaults
 export OLLAMA_HOST=http://127.0.0.1:11434
+
+# LLamaSharp in-process (no HTTP)
+# (Run inside your game server without Ollama; paths point to your .gguf files.)
+# Requires the LLamaSharp CPU (or CUDA) backend and a model file on disk.
+local:
+  engine: llamasharp
+  model_path: models/llama-3.2-1b-instruct-q4_K_M.gguf
+  embed_model_path: models/nomic-embed-text-v1.5.f16.gguf # optional; defaults to model_path
+  context_size: 4096
+  embedding_context_size: 1024
+  gpu_layer_count: 0        # bump if you ship a CUDA backend
+  threads: 8                # optional override; defaults to environment core count
+  batch_size: 512
+  micro_batch_size: 512
+  max_tokens: 256
 
 # Cloud defaults
 export PROVIDER=openai
@@ -250,14 +275,17 @@ var npc = await GameRAGKit.Load("NPCs/guard-north-gate.yaml");
 npc.UseEnv();             // applies PROVIDER/API_KEY/ENDPOINT/OLLAMA_HOST if set
 await npc.EnsureIndexAsync();
 
-var reply = await npc.AskAsync("Where is the master key?", new AskOptions(Importance: 0.8));
+var reply = await npc.AskAsync(
+    "Where is the master key?",
+    new AskOptions(Importance: 0.8, State: "RunState: gate closed, patrol shift B waiting"));
 SubtitleUI.Show(reply.Text);
 ```
 
 `NpcAgent` also supports:
 
-- `StreamAsync` for async enumerated responses (single chunk stream placeholder today).
+- `StreamAsync` for token-by-token streaming (HTTP `/ask/stream` mirrors this via SSE).
 - `RememberAsync` to append runtime memories into the NPC-specific index.
+- `WriteSnapshot(key, state, ttl)` to inject short-lived run state (e.g., supply or morale numbers) without persisting it.
 
 ## Hosted usage (Unreal Blueprint / HTTP)
 
@@ -299,8 +327,7 @@ Routing rules combine config defaults with per-question overrides:
 | `gamerag ingest <dir> [--clean]` | Rebuild indexes for every `.yaml` file in the directory (recursively). |
 | `gamerag chat --npc <file> [--question <text>]` | Quick smoke test for designers/writers. |
 | `gamerag serve --config <dir> [--port <n>]` | Launch a tiny HTTP service (`POST /ask`). |
-
-A `pack` command is planned for platform bundle generation.
+| `gamerag pack <dir> [--output <file>]` | Produce a deployable bundle (configs + lore + `.gamerag` indexes). |
 
 ## Documentation & Examples
 
@@ -321,6 +348,7 @@ A `pack` command is planned for platform bundle generation.
   - [ISSUES_AND_IMPROVEMENTS.md](docs/2025-11-29/ISSUES_AND_IMPROVEMENTS.md) - Detailed analysis and recommendations
   - [QUICK_ISSUE_SUMMARY.md](docs/2025-11-29/QUICK_ISSUE_SUMMARY.md) - Executive summary
   - [CHANGELOG_2025-11-29.md](docs/2025-11-29/CHANGELOG_2025-11-29.md) - Recent changes
+- **[docs/shipping-to-players.md](docs/shipping-to-players.md)** - Build and ship packed indexes without re-ingesting.
 
 ### Developer Resources
 - **[.env.example](.env.example)** - Environment variable template with all providers
@@ -328,7 +356,7 @@ A `pack` command is planned for platform bundle generation.
 
 ## Roadmap
 
-- LLamaSharp local provider for purely in-process inference
+- LLamaSharp local provider for purely in-process inference (available without HTTP)
 - Streaming responses via SSE/WebSockets for cinematic scenes
 - Advanced router strategies (latency, budget, dynamic confidence)
 - Index packing for platform deploys

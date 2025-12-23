@@ -1,7 +1,11 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using GameRagKit;
+using GameRagKit.Cli;
 using GameRagKit.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -157,8 +161,23 @@ serveCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
     await app.RunAsync();
 }, serveConfigOption, servePortOption);
 
+var packConfigArgument = new Argument<DirectoryInfo>("config", description: "Folder containing NPC YAML configs");
+var packOutputOption = new Option<FileInfo?>("--output", description: "Path to the generated pack (zip)");
+var packCommand = new Command("pack", "Bundle configs, lore, and indexes into a deployable archive")
+{
+    packConfigArgument,
+    packOutputOption
+};
+packCommand.SetHandler(async (DirectoryInfo configDir, FileInfo? output) =>
+{
+    var destination = output ?? new FileInfo(Path.Combine(Directory.GetCurrentDirectory(), "gamerag-pack.zip"));
+    await PackBuilder.BuildAsync(configDir, destination, CancellationToken.None);
+    Console.WriteLine($"Pack written to {destination.FullName}");
+}, packConfigArgument, packOutputOption);
+
 root.AddCommand(ingestCommand);
 root.AddCommand(chatCommand);
 root.AddCommand(serveCommand);
+root.AddCommand(packCommand);
 
 return await root.InvokeAsync(args);

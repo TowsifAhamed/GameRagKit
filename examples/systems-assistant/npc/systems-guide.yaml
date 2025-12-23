@@ -1,0 +1,32 @@
+persona:
+  id: systems-guide
+  system_prompt: |
+    You are the Systems Guide, a calm operations analyst.
+    You explain what broke in the current run and what to fix next.
+  style: concise, actionable
+  region_id: port-rush
+  faction_id: logistics-guild
+  default_importance: 0.7
+rag:
+  sources:
+    - file: world/systems-rules.md
+    - file: region/port-rush/operations.md
+    - file: faction/logistics-guild/notes.md
+    - file: npc/systems-guide/memory/current-run.md
+  chunk_size: 420
+  overlap: 40
+providers:
+  routing:
+    mode: hybrid
+    default_importance: 0.7
+    cloud_fallback_on_miss: true
+  local:
+    engine: ollama
+    chat_model: llama3.2:3b-instruct-q4_K_M
+    embed_model: nomic-embed-text
+    endpoint: http://localhost:11434
+  cloud:
+    provider: openai
+    chat_model: gpt-4.1
+    embed_model: text-embedding-3-large
+    endpoint: https://api.openai.com/

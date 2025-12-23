@@ -211,13 +211,7 @@ public sealed class QdrantStore : IVectorStore, IAsyncDisposable
         var point = new PointStruct
         {
             Id = CreatePointId(record.Key),
-            Vectors = new Vectors
-            {
-                Vector = new Vector
-                {
-                    Data = { record.Embedding }
-                }
-            }
+            Vectors = record.Embedding
         };
 
         point.Payload.Add("collection", new QdrantValue { StringValue = record.Collection });

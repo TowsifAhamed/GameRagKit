@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace GameRagKit.Providers;
@@ -23,7 +26,7 @@ public sealed class CloudChatProvider : IChatProvider
 
     public async Task<ChatResponse> GetChatResponseAsync(string systemPrompt, string context, string question, CancellationToken cancellationToken)
     {
-        var request = BuildRequest(systemPrompt, context, question);
+        var request = BuildRequest(systemPrompt, context, question, stream: false);
         using var response = await _httpClient.PostAsJsonAsync(GetPath(), request, SerializerOptions, cancellationToken);
         response.EnsureSuccessStatusCode();
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -46,7 +49,86 @@ public sealed class CloudChatProvider : IChatProvider
         return new ChatResponse(content.Trim(), shouldFallback);
     }
 
-    private object BuildRequest(string systemPrompt, string context, string question)
+    public async IAsyncEnumerable<string> StreamAsync(string systemPrompt, string context, string question, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        if (string.Equals(_provider, "gemini", StringComparison.OrdinalIgnoreCase))
+        {
+            var geminiResponse = await GetChatResponseAsync(systemPrompt, context, question, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(geminiResponse.Text))
+            {
+                yield return geminiResponse.Text;
+            }
+            yield break;
+        }
+
+        var request = BuildRequest(systemPrompt, context, question, stream: true);
+        using var message = new HttpRequestMessage(HttpMethod.Post, GetPath())
+        {
+            Content = JsonContent.Create(request, options: SerializerOptions)
+        };
+
+        using var response = await _httpClient.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var reader = new StreamReader(stream);
+        string? line;
+        while ((line = await reader.ReadLineAsync()) != null)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var payload = line.Substring("data:".Length).Trim();
+            if (string.Equals(payload, "[DONE]", StringComparison.OrdinalIgnoreCase))
+            {
+                yield break;
+            }
+
+            if (string.IsNullOrWhiteSpace(payload))
+            {
+                continue;
+            }
+
+            var maybeText = TryExtractDelta(payload);
+            if (!string.IsNullOrEmpty(maybeText))
+            {
+                yield return maybeText;
+            }
+        }
+    }
+
+    private static string? TryExtractDelta(string payload)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            if (document.RootElement.TryGetProperty("choices", out var choices)
+                && choices.ValueKind == JsonValueKind.Array
+                && choices.GetArrayLength() > 0)
+            {
+                var delta = choices[0].GetProperty("delta");
+                if (delta.TryGetProperty("content", out var content))
+                {
+                    return content.GetString();
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignore malformed chunks
+        }
+
+        return null;
+    }
+
+    private object BuildRequest(string systemPrompt, string context, string question, bool stream)
     {
         if (_provider == "gemini")
         {
@@ -79,8 +161,17 @@ public sealed class CloudChatProvider : IChatProvider
             model = _model,
             messages,
             temperature = 0.6,
-            max_tokens = 512
+            max_tokens = 512,
+            stream
         };
+    }
+
+    async IAsyncEnumerable<string> IChatModel.StreamAsync(string system, string context, string user, [EnumeratorCancellation] CancellationToken ct)
+    {
+        await foreach (var token in StreamAsync(system, context, user, ct).ConfigureAwait(false))
+        {
+            yield return token;
+        }
     }
 
     private string GetPath()

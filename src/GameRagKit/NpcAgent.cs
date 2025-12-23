@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using GameRagKit.Config;
 using GameRagKit.Pipeline;
 using GameRagKit.Providers;
@@ -26,6 +27,7 @@ public sealed class NpcAgent : IAsyncDisposable
     private readonly Retriever _retriever;
     private readonly ProviderRuntimeOptions _runtimeOptions = new();
     private readonly ConcurrentDictionary<string, string> _sourceHashes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SnapshotEntry> _snapshots = new(StringComparer.OrdinalIgnoreCase);
     private IEmbeddingProvider? _embeddingProvider;
 
     public string PersonaId => _config.Persona.Id;
@@ -74,6 +76,8 @@ public sealed class NpcAgent : IAsyncDisposable
             _sourceHashes[pair.Key] = pair.Value;
         }
 
+        var indexCache = new Dictionary<IndexScopeKey, VectorIndex>();
+
         foreach (var source in _config.Rag.Sources)
         {
             var sourcePath = Path.Combine(_configDirectory, source.File);
@@ -90,16 +94,26 @@ public sealed class NpcAgent : IAsyncDisposable
             }
 
             var scope = IndexScopeKey.FromSource(_config.Persona, source);
+            if (!indexCache.TryGetValue(scope, out var vectorIndex))
+            {
+                vectorIndex = await _manifestRepository.LoadIndexAsync(scope, cancellationToken).ConfigureAwait(false);
+                indexCache[scope] = vectorIndex;
+            }
+
             var embeddingProvider = await GetEmbeddingProviderAsync(cancellationToken).ConfigureAwait(false);
             var chunks = _chunker.Chunk(text, _config.Rag.ChunkSize, _config.Rag.Overlap)
                 .Select((chunk, index) => new ChunkRecord(index, chunk, sourcePath, scope));
+
+            vectorIndex.RemoveBySource(sourcePath);
 
             var records = new List<RagRecord>();
             foreach (var chunk in chunks)
             {
                 var embedding = await embeddingProvider.EmbedAsync(chunk.Text, cancellationToken).ConfigureAwait(false);
-                var record = CreateRecord(chunk, embedding, source);
+                var metadata = BuildMetadata(chunk.Scope, source, chunk.SourcePath);
+                var record = CreateRecord(chunk, embedding, metadata);
                 records.Add(record);
+                vectorIndex.Upsert(new VectorChunk(record.Key, chunk.Text, sourcePath, metadata, embedding));
             }
 
             await _vectorStore.UpsertAsync(records, cancellationToken).ConfigureAwait(false);
@@ -108,6 +122,11 @@ public sealed class NpcAgent : IAsyncDisposable
         }
 
         await _manifestRepository.SaveManifestAsync(_config.Persona.Id, manifest, cancellationToken).ConfigureAwait(false);
+
+        foreach (var pair in indexCache)
+        {
+            await _manifestRepository.SaveIndexAsync(pair.Key, pair.Value, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task<AgentReply> AskAsync(string playerLine, AskOptions? opts = null, CancellationToken cancellationToken = default)
@@ -152,6 +171,18 @@ public sealed class NpcAgent : IAsyncDisposable
         {
             yield return token;
         }
+    }
+
+    public void WriteSnapshot(string key, object state, TimeSpan? ttl = null)
+    {
+        var payload = state switch
+        {
+            string s => s,
+            _ => JsonSerializer.Serialize(state, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+        };
+
+        var expiry = DateTimeOffset.UtcNow.Add(ttl ?? TimeSpan.FromMinutes(10));
+        _snapshots[key] = new SnapshotEntry(payload, expiry);
     }
 
     public async Task RememberAsync(string fact, CancellationToken cancellationToken = default)
@@ -223,6 +254,7 @@ public sealed class NpcAgent : IAsyncDisposable
         var hits = await _retriever.RetrieveAsync(queryEmbedding, opts.TopK, cancellationToken).ConfigureAwait(false);
 
         var builder = new StringBuilder();
+        AppendRuntimeState(builder, opts.State);
         foreach (var hit in hits)
         {
             var source = hit.Tags.TryGetValue("source", out var s) ? Path.GetFileName(s) : "unknown";
@@ -234,9 +266,8 @@ public sealed class NpcAgent : IAsyncDisposable
         return (builder.ToString(), hits);
     }
 
-    private RagRecord CreateRecord(ChunkRecord chunk, float[] embedding, SourceConfig source)
+    private RagRecord CreateRecord(ChunkRecord chunk, float[] embedding, Dictionary<string, string> metadata)
     {
-        var metadata = BuildMetadata(chunk.Scope, source, chunk.SourcePath);
         var keySeed = $"{chunk.Scope.Scope}:{chunk.SourcePath}:{chunk.Index}";
         var key = CreateDeterministicGuid(keySeed);
         return new RagRecord(key.ToString(), chunk.Scope.Scope, chunk.Text, embedding, metadata);
@@ -257,12 +288,49 @@ public sealed class NpcAgent : IAsyncDisposable
             promptBuilder.AppendLine("You may answer out of character if needed.");
         }
 
+        promptBuilder.AppendLine("If the provided sources do not contain the answer, say you cannot determine it from available evidence.");
+
         if (!string.IsNullOrWhiteSpace(opts.SystemOverride))
         {
             promptBuilder.AppendLine(opts.SystemOverride);
         }
 
         return promptBuilder.ToString();
+    }
+
+    private void AppendRuntimeState(StringBuilder builder, string? transientState)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var hasState = false;
+        if (!string.IsNullOrWhiteSpace(transientState))
+        {
+            builder.AppendLine("RUNTIME STATE:");
+            builder.AppendLine(transientState!.Trim());
+            builder.AppendLine("---");
+            hasState = true;
+        }
+
+        foreach (var pair in _snapshots.ToArray())
+        {
+            if (pair.Value.Expiry <= now)
+            {
+                _snapshots.TryRemove(pair.Key, out _);
+                continue;
+            }
+
+            if (!hasState)
+            {
+                builder.AppendLine("RUNTIME STATE:");
+                hasState = true;
+            }
+
+            builder.AppendLine($"{pair.Key}: {pair.Value.Payload}");
+        }
+
+        if (hasState)
+        {
+            builder.AppendLine("---");
+        }
     }
 
     private Dictionary<string, string> BuildMetadata(IndexScopeKey scope, SourceConfig source, string sourcePath)
@@ -319,4 +387,6 @@ public sealed class NpcAgent : IAsyncDisposable
     }
 
     private sealed record ChunkRecord(int Index, string Text, string SourcePath, IndexScopeKey Scope);
+
+    private sealed record SnapshotEntry(string Payload, DateTimeOffset Expiry);
 }

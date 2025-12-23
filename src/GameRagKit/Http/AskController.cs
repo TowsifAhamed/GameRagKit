@@ -45,7 +45,8 @@ public sealed record AskHttpRequest(string Npc, string Question, AskOptionsPaylo
             SystemOverride: Options?.SystemOverride,
             Importance: Options?.Importance ?? double.NaN,
             ForceLocal: Options?.ForceLocal ?? false,
-            ForceCloud: Options?.ForceCloud ?? false);
+            ForceCloud: Options?.ForceCloud ?? false,
+            State: Options?.State);
     }
 }
 
@@ -57,6 +58,7 @@ public sealed record AskOptionsPayload
     public double? Importance { get; init; }
     public bool? ForceLocal { get; init; }
     public bool? ForceCloud { get; init; }
+    public string? State { get; init; }
 }
 
 public sealed record AskHttpResponse(string Answer, string[] Sources, double[] Scores, bool FromCloud);
