@@ -1,5 +1,7 @@
 # GameRAGKit
 
+![Discord member count](https://img.shields.io/discord/1453102384334241856?logo=discord&logoColor=white)
+
 [![NuGet](https://img.shields.io/nuget/v/GameRagKit.svg)](https://www.nuget.org/packages/GameRagKit/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/GameRagKit.svg)](https://www.nuget.org/packages/GameRagKit/)
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE.md)
@@ -23,20 +25,7 @@ If you’d like to support development, you can donate via WiseTag:
 
 ## Community
 
-- Add on to the Discord channel: [https://discord.gg/CmYuMVWGZm](https://discord.gg/CmYuMVWGZm)
-
-<p align="center">
-  <iframe
-    src="https://discord.com/widget?id=1453102384334241856&theme=dark"
-    width="350"
-    height="500"
-    allowtransparency="true"
-    frameborder="0"
-    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts">
-  </iframe>
-</p>
-
-![Discord member count](https://img.shields.io/discord/1453102384334241856?logo=discord&logoColor=white)
+- Join our Discord server: [https://discord.gg/CmYuMVWGZm](https://discord.gg/CmYuMVWGZm)
 
 ## Installation
 
