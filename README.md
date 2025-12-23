@@ -19,7 +19,11 @@ If you’d like to support development, you can donate via WiseTag:
 - WiseTag: `@towsifa8`
 - Donations are used to build AI-enhanced mods for existing games (bringing smarter NPC experiences) and to improve GameRAGKit.
 
-<img src="https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/wisetag.png" alt="WiseTag donation QR (@towsifa8)" width="220" />
+![WiseTag donation QR (@towsifa8)](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/wisetag.png)
+
+## Community
+
+- Add on to the Discord channel: [https://discord.gg/CmYuMVWGZm](https://discord.gg/CmYuMVWGZm)
 
 ## Installation
 
