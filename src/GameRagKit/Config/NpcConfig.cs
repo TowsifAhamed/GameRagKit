@@ -37,6 +37,7 @@ public sealed record PersonaConfig
     public double? DefaultImportance { get; init; }
         = null;
     public List<ActionDefinition> Actions { get; init; } = new();
+    public bool MoodTracking { get; init; } = false;
 }
 
 public sealed record RagConfig

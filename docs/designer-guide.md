@@ -31,6 +31,8 @@ Want the NPC to give items, start quests, or take other gameplay actions during 
 
 Want players to speak to the NPC and hear it reply out loud? See [`docs/voice.md`](voice.md) for the `providers.voice` YAML format and the `/ask/voice` endpoint.
 
+Want the NPC to remember how it feels about the player across conversations? See [`docs/mood.md`](mood.md) for `persona.mood_tracking`.
+
 Want the game to tell the NPC what's nearby, what's in the player's inventory, or the time of day? See [`docs/world-state.md`](world-state.md) — this is set per-request by the game client, not in the NPC's YAML.
 
 ## 4. Rebuild the index

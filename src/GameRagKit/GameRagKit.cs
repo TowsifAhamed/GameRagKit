@@ -29,10 +29,11 @@ public static class GameRAGKit
         var vectorStore = CreateVectorStore(options.Database);
         var chunker = new TextChunker();
         var manifestRepository = new VectorIndexRepository(storageRoot);
+        var moodRepository = new MoodRepository(storageRoot);
         var providerResolver = new ProviderResolver();
         var router = new Router(providerResolver);
 
-        return new NpcAgent(config, configDirectory, chunker, manifestRepository, vectorStore, router);
+        return new NpcAgent(config, configDirectory, chunker, manifestRepository, moodRepository, vectorStore, router);
     }
 
     private static IVectorStore CreateVectorStore(DatabaseOptions database)
