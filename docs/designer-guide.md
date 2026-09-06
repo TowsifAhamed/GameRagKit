@@ -29,6 +29,8 @@ Tip: add metadata by placing files under `world/`, `region/<id>/`, `faction/<id>
 
 Want the NPC to give items, start quests, or take other gameplay actions during dialogue? See [`docs/actions.md`](actions.md) for the `persona.actions` YAML format.
 
+Want the game to tell the NPC what's nearby, what's in the player's inventory, or the time of day? See [`docs/world-state.md`](world-state.md) — this is set per-request by the game client, not in the NPC's YAML.
+
 ## 4. Rebuild the index
 
 Run the CLI after saving lore:
