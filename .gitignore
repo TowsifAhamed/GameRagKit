@@ -28,3 +28,9 @@ validate_setup.sh
 tests/GameRagKit.Tests/Cli/
 tests/GameRagKit.Tests/Providers/
 tests/GameRagKit.Tests/VectorStores/
+
+# Unreal Engine plugin build artifacts (generated locally when compiling the plugin)
+unreal-plugin/**/Binaries/
+unreal-plugin/**/Intermediate/
+unreal-plugin/**/*.VC.db
+unreal-plugin/**/*.VC.opendb

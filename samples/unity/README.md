@@ -1,5 +1,14 @@
 # Unity Integration for GameRagKit
 
+> **This folder is legacy.** The recommended way to integrate GameRagKit into Unity is now
+> the installable UPM package at
+> [`unity-package/com.gameragkit.unity`](../../unity-package/com.gameragkit.unity/README.md) —
+> it has real incremental streaming (this folder's `NpcDialogueManager.cs` buffers the
+> whole SSE response before parsing it, so its "streaming" doesn't actually show a
+> typewriter effect), supports structured world state and NPC actions, and is verified to
+> compile against a real Unity Editor. This folder is kept for reference/older projects
+> but will not receive new features.
+
 This directory contains ready-to-use C# scripts for integrating GameRagKit NPCs into your Unity game.
 
 ## Quick Start
