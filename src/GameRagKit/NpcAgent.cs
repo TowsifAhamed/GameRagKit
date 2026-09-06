@@ -168,16 +168,40 @@ public sealed class NpcAgent : IAsyncDisposable
         return reply;
     }
 
-    public async IAsyncEnumerable<string> StreamAsync(string playerLine, AskOptions? opts = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(string playerLine, AskOptions? opts = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         opts ??= new AskOptions();
-        var (context, _) = await BuildContextAsync(playerLine, opts, cancellationToken).ConfigureAwait(false);
+        var (context, hits) = await BuildContextAsync(playerLine, opts, cancellationToken).ConfigureAwait(false);
         var systemPrompt = BuildSystemPrompt(opts);
         var chatProvider = await _router.ResolveChatAsync(_config, _runtimeOptions, opts, cancellationToken).ConfigureAwait(false);
+
+        yield return new StreamEvent.Start(_config.Persona.Id);
+
+        var raw = new StringBuilder();
+        var fenceFilter = new ActionFenceStreamFilter();
+
         await foreach (var token in chatProvider.StreamAsync(systemPrompt, context, playerLine, cancellationToken).ConfigureAwait(false))
         {
-            yield return token;
+            raw.Append(token);
+
+            foreach (var visibleChunk in fenceFilter.Push(token))
+            {
+                if (visibleChunk.Length > 0)
+                {
+                    yield return new StreamEvent.Chunk(visibleChunk);
+                }
+            }
         }
+
+        var trailing = fenceFilter.Flush();
+        if (trailing.Length > 0)
+        {
+            yield return new StreamEvent.Chunk(trailing);
+        }
+
+        var parsed = ActionParser.Parse(raw.ToString(), _config.Persona.Actions);
+        var sources = hits.Select(hit => hit.Tags.TryGetValue("source", out var source) ? source : string.Empty).ToArray();
+        yield return new StreamEvent.End(sources, parsed.Actions);
     }
 
     public void WriteSnapshot(string key, object state, TimeSpan? ttl = null)

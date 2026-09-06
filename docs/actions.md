@@ -70,6 +70,30 @@ presence, since the game client typically parses/validates the final values itse
 - The parser only trusts action names and args declared in `persona.actions`; anything
   else the model emits (unknown action names, extra args) is silently dropped, never
   passed through to the game client.
-- Because parsing happens after the full response is returned, actions are only
-  available on the non-streaming `/ask` path today; `/ask/stream` streams raw tokens and
-  does not yet parse actions out of the stream.
+- `/ask/stream` also supports actions. The stream holds back player-visible text while a
+  ` ```action ` fence is open, so raw action JSON is never shown to the player mid-stream,
+  then emits the validated `actions` array on the final `end` event once the whole
+  response has been buffered and parsed. See [Streaming protocol](#streaming-protocol)
+  below for the exact event shapes.
+
+## Streaming protocol
+
+`POST /ask/stream` emits a `text/event-stream` response where each `data:` line is a JSON
+object with a `type` field:
+
+```
+data: {"type":"start","npc":"guard-north-gate"}
+
+data: {"type":"chunk","text":"Ah, you've proven yourself. "}
+
+data: {"type":"chunk","text":"Take this token and guard it well."}
+
+data: {"type":"end","sources":["npc:guard-north-gate/notes.txt#0"],"actions":[{"name":"give_item","args":{"item_id":"brass_token","quantity":"1"}}]}
+```
+
+- `start` — sent once, at the beginning of the response.
+- `chunk` — sent for each piece of player-visible text as it streams in. Action-block
+  content is never sent as a `chunk`.
+- `end` — sent once, after the full response has streamed and been parsed. Carries the
+  same `sources` the non-streaming `/ask` endpoint returns, plus the validated `actions`
+  array.
