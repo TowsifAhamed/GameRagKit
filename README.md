@@ -15,12 +15,12 @@ GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for buildin
 
 ## Donate (optional)
 
-If you’d like to support development, you can donate via WiseTag:
+If you’d like to support development, you can donate via RedotPay:
 
-- WiseTag: `@towsifa8`
-- Donations are used to build AI-enhanced mods for existing games (bringing smarter NPC experiences) and to improve GameRAGKit.
+- **RedotPay ID:** `1236302071`
+- **Donations are used to build AI-enhanced mods for existing games (bringing smarter NPC experiences) and to improve GameRAGKit.**
 
-![WiseTag donation QR (@towsifa8)](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/wisetag.png)
+![RedotPay donation QR (1236302071)](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/cllect_qrcode.png)
 
 ## Community
 
