@@ -9,7 +9,8 @@ public sealed record AskOptions(
     double Importance = double.NaN,
     bool ForceLocal = false,
     bool ForceCloud = false,
-    string? State = null);
+    string? State = null,
+    WorldState? WorldState = null);
 
 public sealed record AgentReply(string Text, string[] Sources, double[] Scores, bool FromCloud)
 {

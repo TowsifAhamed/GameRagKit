@@ -285,6 +285,7 @@ public sealed class NpcAgent : IAsyncDisposable
         var hits = await _retriever.RetrieveAsync(queryEmbedding, opts.TopK, cancellationToken).ConfigureAwait(false);
 
         var builder = new StringBuilder();
+        builder.Append(WorldStateFormatter.Format(opts.WorldState));
         AppendRuntimeState(builder, opts.State);
         foreach (var hit in hits)
         {
