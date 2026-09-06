@@ -175,9 +175,75 @@ packCommand.SetHandler(async (DirectoryInfo configDir, FileInfo? output) =>
     Console.WriteLine($"Pack written to {destination.FullName}");
 }, packConfigArgument, packOutputOption);
 
+var studioConfigOption = new Option<DirectoryInfo>("--config", description: "Directory containing NPC YAML configs")
+{ IsRequired = true };
+var studioPortOption = new Option<int>("--port", () => 5290, "Port to listen on");
+var studioCommand = new Command("studio", "Launch a local web UI for editing NPC personas and testing chat")
+{
+    studioConfigOption,
+    studioPortOption
+};
+studioCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
+{
+    if (!configDir.Exists)
+    {
+        Console.Error.WriteLine($"Config directory not found: {configDir.FullName}");
+        return;
+    }
+
+    var registryEntries = new List<KeyValuePair<string, NpcAgent>>();
+    var catalogEntries = new List<StudioNpcEntry>();
+    foreach (var file in configDir.EnumerateFiles("*.yaml", SearchOption.AllDirectories))
+    {
+        var agent = await GameRAGKit.Load(file.FullName);
+        agent.UseEnv();
+        await agent.EnsureIndexAsync();
+        registryEntries.Add(new KeyValuePair<string, NpcAgent>(agent.PersonaId, agent));
+        registryEntries.Add(new KeyValuePair<string, NpcAgent>(Path.GetFileNameWithoutExtension(file.Name), agent));
+        catalogEntries.Add(new StudioNpcEntry(agent.PersonaId, file.FullName));
+    }
+
+    var registry = new AgentRegistry(registryEntries);
+    var catalog = new StudioNpcCatalog(catalogEntries);
+
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenAnyIP(port);
+    });
+
+    var authOptions = ApiAuthOptions.FromEnvironment();
+
+    builder.Services.AddSingleton(registry);
+    builder.Services.AddSingleton(catalog);
+    builder.Services.AddSingleton(authOptions);
+    builder.Services.AddControllers().AddApplicationPart(typeof(GameRagKit.Http.AskController).Assembly);
+
+    var app = builder.Build();
+
+    var webRoot = Path.Combine(AppContext.BaseDirectory, "StudioWeb");
+    if (Directory.Exists(webRoot))
+    {
+        var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRoot);
+        app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
+        app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
+    }
+    else
+    {
+        Console.Error.WriteLine($"Warning: studio web assets not found at {webRoot}; only the API will be available.");
+    }
+
+    app.UseMiddleware<ApiAuthenticationMiddleware>();
+    app.MapControllers();
+
+    Console.WriteLine($"GameRagKit Studio running at http://localhost:{port}");
+    await app.RunAsync();
+}, studioConfigOption, studioPortOption);
+
 root.AddCommand(ingestCommand);
 root.AddCommand(chatCommand);
 root.AddCommand(serveCommand);
 root.AddCommand(packCommand);
+root.AddCommand(studioCommand);
 
 return await root.InvokeAsync(args);
