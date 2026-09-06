@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using GameRagKit.Actions;
 using GameRagKit.Config;
 using GameRagKit.Pipeline;
 using GameRagKit.Providers;
@@ -137,12 +138,16 @@ public sealed class NpcAgent : IAsyncDisposable
         var chatProvider = await _router.ResolveChatAsync(_config, _runtimeOptions, opts, cancellationToken).ConfigureAwait(false);
         var response = await chatProvider.GetChatResponseAsync(systemPrompt, context, playerLine, cancellationToken).ConfigureAwait(false);
         var fromCloud = chatProvider is CloudChatProvider;
+        var parsed = ActionParser.Parse(response.Text, _config.Persona.Actions);
 
         var reply = new AgentReply(
-            response.Text,
+            parsed.CleanedText,
             hits.Select(hit => hit.Tags.TryGetValue("source", out var source) ? source : string.Empty).ToArray(),
             hits.Select(hit => hit.Score ?? 0d).ToArray(),
-            fromCloud);
+            fromCloud)
+        {
+            Actions = parsed.Actions
+        };
 
         if (_config.Providers.Routing.CloudFallbackOnMiss && !fromCloud && response.ShouldFallback)
         {
@@ -150,10 +155,12 @@ public sealed class NpcAgent : IAsyncDisposable
             if (cloudProvider is CloudChatProvider cloud)
             {
                 var cloudResponse = await cloud.GetChatResponseAsync(systemPrompt, context, playerLine, cancellationToken).ConfigureAwait(false);
+                var cloudParsed = ActionParser.Parse(cloudResponse.Text, _config.Persona.Actions);
                 return reply with
                 {
-                    Text = cloudResponse.Text,
-                    FromCloud = true
+                    Text = cloudParsed.CleanedText,
+                    FromCloud = true,
+                    Actions = cloudParsed.Actions
                 };
             }
         }
@@ -161,16 +168,40 @@ public sealed class NpcAgent : IAsyncDisposable
         return reply;
     }
 
-    public async IAsyncEnumerable<string> StreamAsync(string playerLine, AskOptions? opts = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<StreamEvent> StreamAsync(string playerLine, AskOptions? opts = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         opts ??= new AskOptions();
-        var (context, _) = await BuildContextAsync(playerLine, opts, cancellationToken).ConfigureAwait(false);
+        var (context, hits) = await BuildContextAsync(playerLine, opts, cancellationToken).ConfigureAwait(false);
         var systemPrompt = BuildSystemPrompt(opts);
         var chatProvider = await _router.ResolveChatAsync(_config, _runtimeOptions, opts, cancellationToken).ConfigureAwait(false);
+
+        yield return new StreamEvent.Start(_config.Persona.Id);
+
+        var raw = new StringBuilder();
+        var fenceFilter = new ActionFenceStreamFilter();
+
         await foreach (var token in chatProvider.StreamAsync(systemPrompt, context, playerLine, cancellationToken).ConfigureAwait(false))
         {
-            yield return token;
+            raw.Append(token);
+
+            foreach (var visibleChunk in fenceFilter.Push(token))
+            {
+                if (visibleChunk.Length > 0)
+                {
+                    yield return new StreamEvent.Chunk(visibleChunk);
+                }
+            }
         }
+
+        var trailing = fenceFilter.Flush();
+        if (trailing.Length > 0)
+        {
+            yield return new StreamEvent.Chunk(trailing);
+        }
+
+        var parsed = ActionParser.Parse(raw.ToString(), _config.Persona.Actions);
+        var sources = hits.Select(hit => hit.Tags.TryGetValue("source", out var source) ? source : string.Empty).ToArray();
+        yield return new StreamEvent.End(sources, parsed.Actions);
     }
 
     public void WriteSnapshot(string key, object state, TimeSpan? ttl = null)
@@ -290,12 +321,35 @@ public sealed class NpcAgent : IAsyncDisposable
 
         promptBuilder.AppendLine("If the provided sources do not contain the answer, say you cannot determine it from available evidence.");
 
+        if (_config.Persona.Actions.Count > 0)
+        {
+            AppendActionInstructions(promptBuilder, _config.Persona.Actions);
+        }
+
         if (!string.IsNullOrWhiteSpace(opts.SystemOverride))
         {
             promptBuilder.AppendLine(opts.SystemOverride);
         }
 
         return promptBuilder.ToString();
+    }
+
+    private static void AppendActionInstructions(StringBuilder builder, IReadOnlyList<Config.ActionDefinition> actions)
+    {
+        builder.AppendLine("You may perform game actions when appropriate. Available actions:");
+        foreach (var action in actions)
+        {
+            var argsDescription = action.Args.Count == 0
+                ? "no args"
+                : string.Join(", ", action.Args.Select(a => $"{a.Name}: {a.Type}{(a.Required ? "" : ", optional")}"));
+            builder.AppendLine($"- {action.Name}({argsDescription}){(string.IsNullOrWhiteSpace(action.Description) ? "" : $" — {action.Description}")}");
+        }
+
+        builder.AppendLine("To call an action, include exactly one fenced block per action using this exact format:");
+        builder.AppendLine("```action");
+        builder.AppendLine("{\"name\":\"<action_name>\",\"args\":{...}}");
+        builder.AppendLine("```");
+        builder.AppendLine("Only call an action when the situation clearly warrants it. Continue your in-character reply as normal text outside the block.");
     }
 
     private void AppendRuntimeState(StringBuilder builder, string? transientState)

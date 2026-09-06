@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace GameRagKit.Http;
 [Route("ask/stream")]
 public sealed class AskStreamController : ControllerBase
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private readonly AgentRegistry _registry;
 
     public AskStreamController(AgentRegistry registry)
@@ -38,10 +40,28 @@ public sealed class AskStreamController : ControllerBase
         ApiMetrics.ObserveAskStream(request.Npc);
 
         var options = request.ToAskOptions();
-        await foreach (var token in agent.StreamAsync(request.Question, options, cancellationToken).ConfigureAwait(false))
+        await foreach (var streamEvent in agent.StreamAsync(request.Question, options, cancellationToken).ConfigureAwait(false))
         {
-            ApiMetrics.ObserveAskStreamToken(request.Npc);
-            await Response.WriteAsync($"data: {token}\n\n", cancellationToken).ConfigureAwait(false);
+            object payload = streamEvent switch
+            {
+                StreamEvent.Start start => new { type = "start", npc = start.Npc },
+                StreamEvent.Chunk chunk => new { type = "chunk", text = chunk.Text },
+                StreamEvent.End end => new
+                {
+                    type = "end",
+                    sources = end.Sources,
+                    actions = end.Actions.Select(a => new ActionCallPayload(a.Name, a.Args)).ToArray()
+                },
+                _ => throw new InvalidOperationException($"Unknown stream event: {streamEvent.GetType()}")
+            };
+
+            if (streamEvent is StreamEvent.Chunk)
+            {
+                ApiMetrics.ObserveAskStreamToken(request.Npc);
+            }
+
+            var json = JsonSerializer.Serialize(payload, SerializerOptions);
+            await Response.WriteAsync($"data: {json}\n\n", cancellationToken).ConfigureAwait(false);
             await Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
     }
