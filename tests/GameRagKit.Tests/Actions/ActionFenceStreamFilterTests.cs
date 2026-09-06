@@ -6,7 +6,7 @@ namespace GameRagKit.Tests.Actions;
 public sealed class ActionFenceStreamFilterTests
 {
     [Fact]
-    public void Push_With_No_Fence_Passes_Tokens_Through_After_Flush()
+    public void Push_With_No_Block_Passes_Tokens_Through_After_Flush()
     {
         var filter = new ActionFenceStreamFilter();
         var output = new List<string>();
@@ -20,27 +20,27 @@ public sealed class ActionFenceStreamFilterTests
     }
 
     [Fact]
-    public void Push_Hides_Text_Inside_Action_Block_Delivered_As_Single_Token()
+    public void Push_Hides_Text_Inside_Block_Delivered_As_Single_Token()
     {
         var filter = new ActionFenceStreamFilter();
         var output = new List<string>();
 
-        var wholeMessage = "Ah, you've proven yourself. ```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n``` Take this.";
+        var wholeMessage = "Ah, you've proven yourself. [[gamerag:action]]\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n[[/gamerag]] Take this.";
         output.AddRange(filter.Push(wholeMessage));
         output.Add(filter.Flush());
 
         var visible = string.Concat(output);
         visible.Should().Contain("Ah, you've proven yourself.");
         visible.Should().Contain("Take this.");
-        visible.Should().NotContain("```");
+        visible.Should().NotContain("[[gamerag");
         visible.Should().NotContain("give_item");
     }
 
     [Fact]
-    public void Push_Hides_Action_Block_Split_Across_Many_Small_Tokens()
+    public void Push_Hides_Block_Split_Across_Many_Small_Tokens()
     {
         var filter = new ActionFenceStreamFilter();
-        var fullMessage = "Ah, you've proven yourself. ```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n``` Take this token.";
+        var fullMessage = "Ah, you've proven yourself. [[gamerag:action]]\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n[[/gamerag]] Take this token.";
         var output = new List<string>();
 
         // Simulate a real LLM token stream: push one character at a time.
@@ -54,36 +54,36 @@ public sealed class ActionFenceStreamFilterTests
         var visible = string.Concat(output);
         visible.Should().Contain("Ah, you've proven yourself.");
         visible.Should().Contain("Take this token.");
-        visible.Should().NotContain("```");
+        visible.Should().NotContain("[[gamerag");
         visible.Should().NotContain("give_item");
     }
 
     [Fact]
-    public void Push_Handles_Open_Fence_Marker_Split_Exactly_At_Token_Boundary()
+    public void Push_Handles_Open_Marker_Split_Exactly_At_Token_Boundary()
     {
         var filter = new ActionFenceStreamFilter();
         var output = new List<string>();
 
-        // Split "```action" itself across two tokens.
-        output.AddRange(filter.Push("Before text ``"));
-        output.AddRange(filter.Push("`action\n{\"name\":\"start_quest\",\"args\":{\"quest_id\":\"q1\"}}\n``` After text"));
+        // Split "[[gamerag:action]]" itself across two tokens.
+        output.AddRange(filter.Push("Before text [[gam"));
+        output.AddRange(filter.Push("erag:action]]\n{\"name\":\"start_quest\",\"args\":{\"quest_id\":\"q1\"}}\n[[/gamerag]] After text"));
         output.Add(filter.Flush());
 
         var visible = string.Concat(output);
         visible.Should().Contain("Before text");
         visible.Should().Contain("After text");
-        visible.Should().NotContain("```");
+        visible.Should().NotContain("[[gamerag");
         visible.Should().NotContain("start_quest");
     }
 
     [Fact]
-    public void Push_Handles_Close_Fence_Marker_Split_Across_Tokens()
+    public void Push_Handles_Close_Marker_Split_Across_Tokens()
     {
         var filter = new ActionFenceStreamFilter();
         var output = new List<string>();
 
-        output.AddRange(filter.Push("```action\n{\"name\":\"start_quest\",\"args\":{}}\n``"));
-        output.AddRange(filter.Push("` visible after"));
+        output.AddRange(filter.Push("[[gamerag:action]]\n{\"name\":\"start_quest\",\"args\":{}}\n[[/game"));
+        output.AddRange(filter.Push("rag]] visible after"));
         output.Add(filter.Flush());
 
         var visible = string.Concat(output);
@@ -91,10 +91,10 @@ public sealed class ActionFenceStreamFilterTests
     }
 
     [Fact]
-    public void Push_With_Multiple_Action_Blocks_Hides_Both()
+    public void Push_With_Multiple_Blocks_Hides_Both()
     {
         var filter = new ActionFenceStreamFilter();
-        var message = "A ```action\n{\"name\":\"a\",\"args\":{}}\n``` B ```action\n{\"name\":\"b\",\"args\":{}}\n``` C";
+        var message = "A [[gamerag:action]]\n{\"name\":\"a\",\"args\":{}}\n[[/gamerag]] B [[gamerag:mood]]\n{\"value\":\"wary\"}\n[[/gamerag]] C";
         var output = new List<string>();
 
         output.AddRange(filter.Push(message));
@@ -104,16 +104,16 @@ public sealed class ActionFenceStreamFilterTests
         visible.Should().Contain("A");
         visible.Should().Contain("B");
         visible.Should().Contain("C");
-        visible.Should().NotContain("```");
+        visible.Should().NotContain("[[gamerag");
     }
 
     [Fact]
-    public void Flush_After_Unclosed_Action_Block_Drops_Remaining_Text()
+    public void Flush_After_Unclosed_Block_Drops_Remaining_Text()
     {
         var filter = new ActionFenceStreamFilter();
         var output = new List<string>();
 
-        output.AddRange(filter.Push("Visible start ```action\n{\"name\":\"give_item\""));
+        output.AddRange(filter.Push("Visible start [[gamerag:action]]\n{\"name\":\"give_item\""));
         output.AddRange(filter.Push(",\"args\":{\"item_id\":\"key\"}}"));
         output.Add(filter.Flush());
 
@@ -132,6 +132,19 @@ public sealed class ActionFenceStreamFilterTests
 
         var visible = string.Concat(output);
         visible.Should().Be("Here is some ```code``` in my reply.");
+    }
+
+    [Fact]
+    public void Push_Does_Not_False_Positive_On_Double_Brackets_Without_Gamerag_Prefix()
+    {
+        var filter = new ActionFenceStreamFilter();
+        var output = new List<string>();
+
+        output.AddRange(filter.Push("See reference [[1]] and [[citation needed]] here."));
+        output.Add(filter.Flush());
+
+        var visible = string.Concat(output);
+        visible.Should().Be("See reference [[1]] and [[citation needed]] here.");
     }
 
     [Fact]

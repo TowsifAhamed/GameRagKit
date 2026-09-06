@@ -4,17 +4,21 @@ namespace GameRagKit.Actions;
 
 /// <summary>
 /// Splits an incoming token stream into player-visible text chunks, holding back any text
-/// once a ```action fence opens so raw action JSON is never shown to the player, and
-/// resuming visible output once the closing fence is seen. Safe to feed one token at a
-/// time; correctly handles a fence marker split across token boundaries.
+/// once a "[[gamerag:tag]]" block opens so raw structured-data JSON (actions, mood, etc.)
+/// is never shown to the player, and resuming visible output once the matching
+/// "[[/gamerag]]" close marker is seen. Safe to feed one token at a time; correctly
+/// handles a marker split across token boundaries. The marker is deliberately not a
+/// markdown code fence (```tag), since that would collide with ordinary code blocks a
+/// model might legitimately include in a reply -- see GameRagBlockParser for the exact
+/// wire format this filter's open/close markers match.
 /// </summary>
 public sealed class ActionFenceStreamFilter
 {
-    private const string OpenFence = "```action";
-    private const string CloseFence = "```";
+    private const string OpenMarkerPrefix = "[[gamerag:";
+    private const string CloseMarker = "[[/gamerag]]";
 
     private readonly StringBuilder _buffer = new();
-    private bool _insideActionBlock;
+    private bool _insideBlock;
 
     public IEnumerable<string> Push(string token)
     {
@@ -23,19 +27,34 @@ public sealed class ActionFenceStreamFilter
 
         while (true)
         {
-            if (!_insideActionBlock)
+            if (!_insideBlock)
             {
                 var text = _buffer.ToString();
-                var openIndex = text.IndexOf(OpenFence, StringComparison.Ordinal);
+                var openIndex = text.IndexOf(OpenMarkerPrefix, StringComparison.Ordinal);
                 if (openIndex < 0)
                 {
-                    // No fence found yet. Hold back a small tail in case the fence marker
-                    // is split across this token and the next one.
-                    var safeLength = Math.Max(0, text.Length - OpenFence.Length);
+                    // No opener found yet. Hold back a small tail in case the marker is
+                    // split across this token and the next one.
+                    var safeLength = Math.Max(0, text.Length - OpenMarkerPrefix.Length);
                     if (safeLength > 0)
                     {
                         results.Add(text[..safeLength]);
                         _buffer.Remove(0, safeLength);
+                    }
+
+                    break;
+                }
+
+                // Found the opener prefix. Wait for the closing "]]" of "[[gamerag:tag]]"
+                // before committing to hiding the block, so a partial prefix match doesn't
+                // prematurely swallow player-visible text.
+                var closeBracketIndex = text.IndexOf("]]", openIndex, StringComparison.Ordinal);
+                if (closeBracketIndex < 0)
+                {
+                    if (openIndex > 0)
+                    {
+                        results.Add(text[..openIndex]);
+                        _buffer.Remove(0, openIndex);
                     }
 
                     break;
@@ -46,20 +65,20 @@ public sealed class ActionFenceStreamFilter
                     results.Add(text[..openIndex]);
                 }
 
-                _buffer.Remove(0, openIndex + OpenFence.Length);
-                _insideActionBlock = true;
+                _buffer.Remove(0, closeBracketIndex + "]]".Length);
+                _insideBlock = true;
                 continue;
             }
 
             var buffered = _buffer.ToString();
-            var closeIndex = buffered.IndexOf(CloseFence, StringComparison.Ordinal);
+            var closeIndex = buffered.IndexOf(CloseMarker, StringComparison.Ordinal);
             if (closeIndex < 0)
             {
                 break;
             }
 
-            _buffer.Remove(0, closeIndex + CloseFence.Length);
-            _insideActionBlock = false;
+            _buffer.Remove(0, closeIndex + CloseMarker.Length);
+            _insideBlock = false;
         }
 
         return results;
@@ -67,13 +86,13 @@ public sealed class ActionFenceStreamFilter
 
     /// <summary>
     /// Call once the underlying token stream is exhausted. Emits any remaining held-back
-    /// text that turned out not to be part of a fence (e.g. trailing "``" that never grew
-    /// into "```action"). If the stream ended mid action-block, that trailing content is
+    /// text that turned out not to be part of a block (e.g. trailing "[[gam" that never
+    /// grew into a full opener). If the stream ended mid block, that trailing content is
     /// incomplete/unparseable and is intentionally dropped rather than shown to the player.
     /// </summary>
     public string Flush()
     {
-        if (_insideActionBlock || _buffer.Length == 0)
+        if (_insideBlock || _buffer.Length == 0)
         {
             _buffer.Clear();
             return string.Empty;

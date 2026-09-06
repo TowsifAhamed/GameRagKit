@@ -1,4 +1,5 @@
 using GameRagKit.Actions;
+using GameRagKit.Mood;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameRagKit.Http;
@@ -32,7 +33,8 @@ public sealed class AskController : ControllerBase
         var options = request.ToAskOptions();
         var reply = await agent.AskAsync(request.Question, options, cancellationToken).ConfigureAwait(false);
         var actions = reply.Actions.Select(a => new ActionCallPayload(a.Name, a.Args)).ToArray();
-        var response = new AskHttpResponse(reply.Text, reply.Sources, reply.Scores, reply.FromCloud, actions);
+        var mood = reply.Mood != null ? new MoodPayload(reply.Mood.Value, reply.Mood.Intensity) : null;
+        var response = new AskHttpResponse(reply.Text, reply.Sources, reply.Scores, reply.FromCloud, actions, mood);
         return Ok(response);
     }
 }
@@ -94,6 +96,8 @@ public sealed record NearbyEntityPayload(string Id, string? Type, double? Distan
 
 public sealed record InventoryItemPayload(string ItemId, int? Quantity);
 
-public sealed record AskHttpResponse(string Answer, string[] Sources, double[] Scores, bool FromCloud, ActionCallPayload[] Actions);
+public sealed record AskHttpResponse(string Answer, string[] Sources, double[] Scores, bool FromCloud, ActionCallPayload[] Actions, MoodPayload? Mood);
 
 public sealed record ActionCallPayload(string Name, IReadOnlyDictionary<string, string> Args);
+
+public sealed record MoodPayload(string Value, double Intensity);

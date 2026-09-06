@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using GameRagKit.Actions;
 using GameRagKit.Config;
+using GameRagKit.Mood;
 using GameRagKit.Pipeline;
 using GameRagKit.Providers;
 using GameRagKit.Routing;
@@ -23,13 +24,16 @@ public sealed class NpcAgent : IAsyncDisposable
     private readonly string _configDirectory;
     private readonly TextChunker _chunker;
     private readonly VectorIndexRepository _manifestRepository;
+    private readonly MoodRepository _moodRepository;
     private readonly IVectorStore _vectorStore;
     private readonly Router _router;
     private readonly Retriever _retriever;
     private readonly ProviderRuntimeOptions _runtimeOptions = new();
     private readonly ConcurrentDictionary<string, string> _sourceHashes = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SnapshotEntry> _snapshots = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _moodLock = new(1, 1);
     private IEmbeddingProvider? _embeddingProvider;
+    private MoodState? _currentMood;
 
     public string PersonaId => _config.Persona.Id;
     public double DefaultImportance => _config.Persona.DefaultImportance ?? _config.Providers.Routing.DefaultImportance;
@@ -39,6 +43,7 @@ public sealed class NpcAgent : IAsyncDisposable
         string configDirectory,
         TextChunker chunker,
         VectorIndexRepository manifestRepository,
+        MoodRepository moodRepository,
         IVectorStore vectorStore,
         Router router)
     {
@@ -46,6 +51,7 @@ public sealed class NpcAgent : IAsyncDisposable
         _configDirectory = configDirectory;
         _chunker = chunker;
         _manifestRepository = manifestRepository;
+        _moodRepository = moodRepository;
         _vectorStore = vectorStore;
         _router = router;
         var filters = config.Rag.Filters != null
@@ -138,19 +144,20 @@ public sealed class NpcAgent : IAsyncDisposable
     {
         opts ??= new AskOptions();
         var (context, hits) = await BuildContextAsync(playerLine, opts, cancellationToken).ConfigureAwait(false);
-        var systemPrompt = BuildSystemPrompt(opts);
+        var systemPrompt = await BuildSystemPromptAsync(opts, cancellationToken).ConfigureAwait(false);
         var chatProvider = await _router.ResolveChatAsync(_config, _runtimeOptions, opts, cancellationToken).ConfigureAwait(false);
         var response = await chatProvider.GetChatResponseAsync(systemPrompt, context, playerLine, cancellationToken).ConfigureAwait(false);
         var fromCloud = chatProvider is CloudChatProvider;
-        var parsed = ActionParser.Parse(response.Text, _config.Persona.Actions);
+        var (cleanedText, actions, mood) = await ProcessReplyAsync(response.Text, cancellationToken).ConfigureAwait(false);
 
         var reply = new AgentReply(
-            parsed.CleanedText,
+            cleanedText,
             hits.Select(hit => hit.Tags.TryGetValue("source", out var source) ? source : string.Empty).ToArray(),
             hits.Select(hit => hit.Score ?? 0d).ToArray(),
             fromCloud)
         {
-            Actions = parsed.Actions
+            Actions = actions,
+            Mood = mood
         };
 
         if (_config.Providers.Routing.CloudFallbackOnMiss && !fromCloud && response.ShouldFallback)
@@ -159,17 +166,39 @@ public sealed class NpcAgent : IAsyncDisposable
             if (cloudProvider is CloudChatProvider cloud)
             {
                 var cloudResponse = await cloud.GetChatResponseAsync(systemPrompt, context, playerLine, cancellationToken).ConfigureAwait(false);
-                var cloudParsed = ActionParser.Parse(cloudResponse.Text, _config.Persona.Actions);
+                var (cloudText, cloudActions, cloudMood) = await ProcessReplyAsync(cloudResponse.Text, cancellationToken).ConfigureAwait(false);
                 return reply with
                 {
-                    Text = cloudParsed.CleanedText,
+                    Text = cloudText,
                     FromCloud = true,
-                    Actions = cloudParsed.Actions
+                    Actions = cloudActions,
+                    Mood = cloudMood
                 };
             }
         }
 
         return reply;
+    }
+
+    /// <summary>
+    /// Extracts action/mood blocks from a raw model reply, validates them, persists any
+    /// new mood, and returns the player-visible cleaned text alongside the validated
+    /// action calls and the NPC's mood after this reply (unchanged from before if no valid
+    /// mood block was present).
+    /// </summary>
+    private async Task<(string CleanedText, IReadOnlyList<ActionCall> Actions, MoodState? Mood)> ProcessReplyAsync(string rawText, CancellationToken cancellationToken)
+    {
+        var parsed = GameRagBlockParser.Parse(rawText);
+        var actionResult = ActionParser.Validate(parsed.Blocks, _config.Persona.Actions);
+        var moodResult = MoodParser.Validate(parsed.Blocks, DateTimeOffset.UtcNow);
+
+        var mood = _currentMood;
+        if (moodResult.Mood != null)
+        {
+            mood = await UpdateMoodAsync(moodResult.Mood, cancellationToken).ConfigureAwait(false);
+        }
+
+        return (parsed.CleanedText, actionResult.Actions, mood);
     }
 
     /// <summary>
@@ -203,7 +232,7 @@ public sealed class NpcAgent : IAsyncDisposable
     {
         opts ??= new AskOptions();
         var (context, hits) = await BuildContextAsync(playerLine, opts, cancellationToken).ConfigureAwait(false);
-        var systemPrompt = BuildSystemPrompt(opts);
+        var systemPrompt = await BuildSystemPromptAsync(opts, cancellationToken).ConfigureAwait(false);
         var chatProvider = await _router.ResolveChatAsync(_config, _runtimeOptions, opts, cancellationToken).ConfigureAwait(false);
 
         yield return new StreamEvent.Start(_config.Persona.Id);
@@ -230,9 +259,9 @@ public sealed class NpcAgent : IAsyncDisposable
             yield return new StreamEvent.Chunk(trailing);
         }
 
-        var parsed = ActionParser.Parse(raw.ToString(), _config.Persona.Actions);
+        var (_, actions, mood) = await ProcessReplyAsync(raw.ToString(), cancellationToken).ConfigureAwait(false);
         var sources = hits.Select(hit => hit.Tags.TryGetValue("source", out var source) ? source : string.Empty).ToArray();
-        yield return new StreamEvent.End(sources, parsed.Actions);
+        yield return new StreamEvent.End(sources, actions, mood);
     }
 
     public void WriteSnapshot(string key, object state, TimeSpan? ttl = null)
@@ -336,7 +365,7 @@ public sealed class NpcAgent : IAsyncDisposable
         return new RagRecord(key.ToString(), chunk.Scope.Scope, chunk.Text, embedding, metadata);
     }
 
-    private string BuildSystemPrompt(AskOptions opts)
+    private async Task<string> BuildSystemPromptAsync(AskOptions opts, CancellationToken cancellationToken)
     {
         var promptBuilder = new StringBuilder();
         promptBuilder.AppendLine(_config.Persona.SystemPrompt);
@@ -358,6 +387,12 @@ public sealed class NpcAgent : IAsyncDisposable
             AppendActionInstructions(promptBuilder, _config.Persona.Actions);
         }
 
+        if (_config.Persona.MoodTracking)
+        {
+            var mood = await GetCurrentMoodAsync(cancellationToken).ConfigureAwait(false);
+            AppendMoodInstructions(promptBuilder, mood);
+        }
+
         if (!string.IsNullOrWhiteSpace(opts.SystemOverride))
         {
             promptBuilder.AppendLine(opts.SystemOverride);
@@ -377,11 +412,60 @@ public sealed class NpcAgent : IAsyncDisposable
             builder.AppendLine($"- {action.Name}({argsDescription}){(string.IsNullOrWhiteSpace(action.Description) ? "" : $" — {action.Description}")}");
         }
 
-        builder.AppendLine("To call an action, include exactly one fenced block per action using this exact format:");
-        builder.AppendLine("```action");
+        builder.AppendLine("To call an action, include exactly one block per action using this exact format:");
+        builder.AppendLine("[[gamerag:action]]");
         builder.AppendLine("{\"name\":\"<action_name>\",\"args\":{...}}");
-        builder.AppendLine("```");
+        builder.AppendLine("[[/gamerag]]");
         builder.AppendLine("Only call an action when the situation clearly warrants it. Continue your in-character reply as normal text outside the block.");
+    }
+
+    private static void AppendMoodInstructions(StringBuilder builder, MoodState? currentMood)
+    {
+        var moodDescription = currentMood != null && currentMood.Value != "neutral"
+            ? $"Your current mood is \"{currentMood.Value}\" (intensity {currentMood.Intensity:0.0})."
+            : "Your current mood is neutral.";
+
+        builder.AppendLine(moodDescription);
+        builder.AppendLine("If this exchange meaningfully changes how you feel, report your new mood using this exact format:");
+        builder.AppendLine("[[gamerag:mood]]");
+        builder.AppendLine("{\"value\":\"<one or two word mood, e.g. wary, delighted, hostile>\",\"intensity\":<0.0-1.0>}");
+        builder.AppendLine("[[/gamerag]]");
+        builder.AppendLine("Only report a mood change when it's genuinely warranted, not after every reply. Continue your in-character reply as normal text outside the block.");
+    }
+
+    private async Task<MoodState?> GetCurrentMoodAsync(CancellationToken cancellationToken)
+    {
+        if (_currentMood != null)
+        {
+            return _currentMood;
+        }
+
+        await _moodLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _currentMood ??= await _moodRepository.LoadAsync(_config.Persona.Id, cancellationToken).ConfigureAwait(false);
+            return _currentMood;
+        }
+        finally
+        {
+            _moodLock.Release();
+        }
+    }
+
+    private async Task<MoodState> UpdateMoodAsync(MoodState mood, CancellationToken cancellationToken)
+    {
+        await _moodLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _currentMood = mood;
+        }
+        finally
+        {
+            _moodLock.Release();
+        }
+
+        await _moodRepository.SaveAsync(_config.Persona.Id, mood, cancellationToken).ConfigureAwait(false);
+        return mood;
     }
 
     private void AppendRuntimeState(StringBuilder builder, string? transientState)

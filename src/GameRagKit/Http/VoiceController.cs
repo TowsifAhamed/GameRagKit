@@ -74,6 +74,7 @@ public sealed class VoiceController : ControllerBase
         }
 
         var actions = voiceReply.Reply.Actions.Select(a => new ActionCallPayload(a.Name, a.Args)).ToArray();
+        var mood = voiceReply.Reply.Mood != null ? new MoodPayload(voiceReply.Reply.Mood.Value, voiceReply.Reply.Mood.Intensity) : null;
         var response = new VoiceHttpResponse(
             voiceReply.Transcript,
             voiceReply.Reply.Text,
@@ -81,6 +82,7 @@ public sealed class VoiceController : ControllerBase
             voiceReply.Reply.Scores,
             voiceReply.Reply.FromCloud,
             actions,
+            mood,
             voiceReply.ReplyAudioWavBytes != null ? Convert.ToBase64String(voiceReply.ReplyAudioWavBytes) : null);
 
         return Ok(response);
@@ -94,4 +96,5 @@ public sealed record VoiceHttpResponse(
     double[] Scores,
     bool FromCloud,
     ActionCallPayload[] Actions,
+    MoodPayload? Mood,
     string? ReplyAudioWavBase64);

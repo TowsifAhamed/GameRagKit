@@ -28,75 +28,86 @@ public sealed class ActionParserTests
         }
     };
 
+    private static IReadOnlyList<GameRagBlock> Blocks(params (string Tag, string Json)[] blocks)
+        => blocks.Select(b => new GameRagBlock(b.Tag, b.Json)).ToArray();
+
     [Fact]
-    public void Parse_With_No_Action_Block_Returns_Text_Unchanged()
+    public void Validate_With_No_Blocks_Returns_Empty()
     {
-        var text = "Hello traveler, welcome to the keep.";
+        var result = ActionParser.Validate(Array.Empty<GameRagBlock>(), GiveItemActions);
 
-        var result = ActionParser.Parse(text, GiveItemActions);
-
-        result.CleanedText.Should().Be(text);
         result.Actions.Should().BeEmpty();
         result.Errors.Should().BeEmpty();
     }
 
     [Fact]
-    public void Parse_Extracts_Valid_Action_And_Strips_Block_From_Text()
+    public void Validate_Extracts_Valid_Action()
     {
-        var text = "Ah, you've proven yourself.\n```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"brass_token\",\"quantity\":1}}\n```\nTake this token and guard it well.";
+        var blocks = Blocks(("action", "{\"name\":\"give_item\",\"args\":{\"item_id\":\"brass_token\",\"quantity\":1}}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().HaveCount(1);
         result.Actions[0].Name.Should().Be("give_item");
         result.Actions[0].Args.Should().Contain(new KeyValuePair<string, string>("item_id", "brass_token"));
         result.Actions[0].Args.Should().Contain(new KeyValuePair<string, string>("quantity", "1"));
-        result.CleanedText.Should().NotContain("```");
-        result.CleanedText.Should().Contain("Ah, you've proven yourself.");
-        result.CleanedText.Should().Contain("Take this token and guard it well.");
         result.Errors.Should().BeEmpty();
     }
 
     [Fact]
-    public void Parse_Extracts_Multiple_Action_Blocks()
+    public void Validate_Extracts_Multiple_Action_Blocks()
     {
-        var text = "```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n```\n```action\n{\"name\":\"start_quest\",\"args\":{\"quest_id\":\"find_king\"}}\n```";
+        var blocks = Blocks(
+            ("action", "{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}"),
+            ("action", "{\"name\":\"start_quest\",\"args\":{\"quest_id\":\"find_king\"}}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().HaveCount(2);
         result.Actions.Select(a => a.Name).Should().BeEquivalentTo(new[] { "give_item", "start_quest" });
     }
 
     [Fact]
-    public void Parse_Rejects_Action_Not_In_Allowed_List()
+    public void Validate_Ignores_Blocks_With_Other_Tags()
     {
-        var text = "```action\n{\"name\":\"delete_world\",\"args\":{}}\n```";
+        var blocks = Blocks(
+            ("action", "{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}"),
+            ("mood", "{\"value\":\"wary\"}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
-        result.Actions.Should().BeEmpty();
-        result.Errors.Should().ContainSingle(e => e.Contains("delete_world") && e.Contains("not in the NPC's allowed action list"));
-        result.CleanedText.Should().BeEmpty();
+        result.Actions.Should().ContainSingle();
+        result.Actions[0].Name.Should().Be("give_item");
     }
 
     [Fact]
-    public void Parse_Rejects_Call_Missing_Required_Arg()
+    public void Validate_Rejects_Action_Not_In_Allowed_List()
     {
-        var text = "```action\n{\"name\":\"give_item\",\"args\":{}}\n```";
+        var blocks = Blocks(("action", "{\"name\":\"delete_world\",\"args\":{}}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
+
+        result.Actions.Should().BeEmpty();
+        result.Errors.Should().ContainSingle(e => e.Contains("delete_world") && e.Contains("not in the NPC's allowed action list"));
+    }
+
+    [Fact]
+    public void Validate_Rejects_Call_Missing_Required_Arg()
+    {
+        var blocks = Blocks(("action", "{\"name\":\"give_item\",\"args\":{}}"));
+
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().BeEmpty();
         result.Errors.Should().ContainSingle(e => e.Contains("missing required arg \"item_id\""));
     }
 
     [Fact]
-    public void Parse_Allows_Missing_Optional_Arg()
+    public void Validate_Allows_Missing_Optional_Arg()
     {
-        var text = "```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n```";
+        var blocks = Blocks(("action", "{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().ContainSingle();
         result.Actions[0].Args.Should().ContainKey("item_id");
@@ -105,11 +116,11 @@ public sealed class ActionParserTests
     }
 
     [Fact]
-    public void Parse_Drops_Undeclared_Args()
+    public void Validate_Drops_Undeclared_Args()
     {
-        var text = "```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\",\"malicious_field\":\"drop_table\"}}\n```";
+        var blocks = Blocks(("action", "{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\",\"malicious_field\":\"drop_table\"}}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().ContainSingle();
         result.Actions[0].Args.Should().NotContainKey("malicious_field");
@@ -117,46 +128,34 @@ public sealed class ActionParserTests
     }
 
     [Fact]
-    public void Parse_Handles_Malformed_Json_Without_Throwing()
+    public void Validate_Handles_Malformed_Json_Without_Throwing()
     {
-        var text = "```action\n{not valid json\n```\nStill talking after the broken block.";
+        var blocks = Blocks(("action", "{not valid json"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().BeEmpty();
         result.Errors.Should().ContainSingle(e => e.Contains("Malformed action JSON"));
-        result.CleanedText.Should().Contain("Still talking after the broken block.");
     }
 
     [Fact]
-    public void Parse_With_No_Allowed_Actions_Returns_Text_Unchanged_Even_If_Block_Present()
+    public void Validate_With_No_Allowed_Actions_Returns_Empty_Even_If_Block_Present()
     {
-        var text = "```action\n{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}\n```";
+        var blocks = Blocks(("action", "{\"name\":\"give_item\",\"args\":{\"item_id\":\"key\"}}"));
 
-        var result = ActionParser.Parse(text, Array.Empty<ActionDefinition>());
+        var result = ActionParser.Validate(blocks, Array.Empty<ActionDefinition>());
 
-        result.CleanedText.Should().Be(text);
         result.Actions.Should().BeEmpty();
     }
 
     [Fact]
-    public void Parse_Is_Case_Insensitive_On_Action_Name()
+    public void Validate_Is_Case_Insensitive_On_Action_Name()
     {
-        var text = "```action\n{\"name\":\"GIVE_ITEM\",\"args\":{\"item_id\":\"key\"}}\n```";
+        var blocks = Blocks(("action", "{\"name\":\"GIVE_ITEM\",\"args\":{\"item_id\":\"key\"}}"));
 
-        var result = ActionParser.Parse(text, GiveItemActions);
+        var result = ActionParser.Validate(blocks, GiveItemActions);
 
         result.Actions.Should().ContainSingle();
-        result.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void Parse_Empty_Text_Returns_Empty()
-    {
-        var result = ActionParser.Parse(string.Empty, GiveItemActions);
-
-        result.CleanedText.Should().BeEmpty();
-        result.Actions.Should().BeEmpty();
         result.Errors.Should().BeEmpty();
     }
 }

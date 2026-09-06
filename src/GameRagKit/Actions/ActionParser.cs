@@ -1,39 +1,40 @@
-using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using GameRagKit.Config;
 
 namespace GameRagKit.Actions;
 
 public static class ActionParser
 {
-    private static readonly Regex ActionBlockPattern = new(
-        @"```action\s*(?<json>.*?)\s*```",
-        RegexOptions.Singleline | RegexOptions.Compiled);
+    private const string Tag = "action";
 
-    public static ActionParseResult Parse(string rawText, IReadOnlyList<ActionDefinition> allowedActions)
+    /// <summary>
+    /// Validates the "action"-tagged blocks out of a shared GameRagBlockParser result.
+    /// Callers that also care about other tags (e.g. "mood") should call
+    /// GameRagBlockParser.Parse once and pass the same Blocks list to each validator,
+    /// rather than re-parsing the raw text per tag.
+    /// </summary>
+    public static ActionParseResult Validate(IReadOnlyList<GameRagBlock> blocks, IReadOnlyList<ActionDefinition> allowedActions)
     {
-        if (string.IsNullOrEmpty(rawText) || allowedActions.Count == 0)
+        if (blocks.Count == 0 || allowedActions.Count == 0)
         {
-            return new ActionParseResult(rawText, Array.Empty<ActionCall>(), Array.Empty<string>());
+            return new ActionParseResult(Array.Empty<ActionCall>(), Array.Empty<string>());
         }
 
         var definitionsByName = allowedActions.ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
         var calls = new List<ActionCall>();
         var errors = new List<string>();
 
-        var cleaned = ActionBlockPattern.Replace(rawText, match =>
+        foreach (var block in blocks)
         {
-            var json = match.Groups["json"].Value;
-            if (!TryParseCall(json, definitionsByName, calls, errors))
+            if (!string.Equals(block.Tag, Tag, StringComparison.OrdinalIgnoreCase))
             {
-                // Leave parse/validation errors recorded; still strip the block from player-visible text.
+                continue;
             }
 
-            return string.Empty;
-        });
+            TryParseCall(block.RawJson, definitionsByName, calls, errors);
+        }
 
-        return new ActionParseResult(CollapseBlankLines(cleaned), calls, errors);
+        return new ActionParseResult(calls, errors);
     }
 
     private static bool TryParseCall(
@@ -104,28 +105,5 @@ public static class ActionParser
             calls.Add(new ActionCall(name, args));
             return true;
         }
-    }
-
-    private static string CollapseBlankLines(string text)
-    {
-        var lines = text.Split('\n')
-            .Select(line => line.TrimEnd('\r'))
-            .ToList();
-
-        var builder = new StringBuilder();
-        var previousBlank = false;
-        foreach (var line in lines)
-        {
-            var isBlank = string.IsNullOrWhiteSpace(line);
-            if (isBlank && previousBlank)
-            {
-                continue;
-            }
-
-            builder.AppendLine(line);
-            previousBlank = isBlank;
-        }
-
-        return builder.ToString().Trim();
     }
 }

@@ -50,7 +50,8 @@ public sealed class AskStreamController : ControllerBase
                 {
                     type = "end",
                     sources = end.Sources,
-                    actions = end.Actions.Select(a => new ActionCallPayload(a.Name, a.Args)).ToArray()
+                    actions = end.Actions.Select(a => new ActionCallPayload(a.Name, a.Args)).ToArray(),
+                    mood = end.Mood != null ? new MoodPayload(end.Mood.Value, end.Mood.Intensity) : null
                 },
                 _ => throw new InvalidOperationException($"Unknown stream event: {streamEvent.GetType()}")
             };

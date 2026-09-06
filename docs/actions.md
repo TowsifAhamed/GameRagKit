@@ -11,20 +11,20 @@ to the model provider.
 
 1. If an NPC's YAML declares `persona.actions`, GameRagKit appends an action catalogue to
    the system prompt describing each action's name, args, and types, plus the exact
-   fenced-block format to use.
+   block format to use.
 2. The model's raw reply may include a block like:
 
    ```
    Ah, you've proven yourself.
-   ```action
+   [[gamerag:action]]
    {"name":"give_item","args":{"item_id":"brass_token","quantity":1}}
-   ```
+   [[/gamerag]]
    Take this token and guard it well.
    ```
 
-3. GameRagKit parses every `` ```action `` block out of the reply, validates the action
-   name against the NPC's declared whitelist and required args, drops any undeclared
-   args, and strips the block from the player-visible text.
+3. GameRagKit parses every `[[gamerag:action]] ... [[/gamerag]]` block out of the reply,
+   validates the action name against the NPC's declared whitelist and required args,
+   drops any undeclared args, and strips the block from the player-visible text.
 4. The cleaned text and the validated action calls are returned separately:
    - HTTP `/ask` response gains an `actions` array: `[{ "name": "give_item", "args": {...} }]`.
    - The game client is responsible for executing the action (giving the item, starting
@@ -71,10 +71,13 @@ presence, since the game client typically parses/validates the final values itse
   else the model emits (unknown action names, extra args) is silently dropped, never
   passed through to the game client.
 - `/ask/stream` also supports actions. The stream holds back player-visible text while a
-  ` ```action ` fence is open, so raw action JSON is never shown to the player mid-stream,
-  then emits the validated `actions` array on the final `end` event once the whole
-  response has been buffered and parsed. See [Streaming protocol](#streaming-protocol)
-  below for the exact event shapes.
+  `[[gamerag:action]] ... [[/gamerag]]` block is open, so raw action JSON is never shown
+  to the player mid-stream, then emits the validated `actions` array on the final `end`
+  event once the whole response has been buffered and parsed. See
+  [Streaming protocol](#streaming-protocol) below for the exact event shapes.
+- Actions share their block format (`[[gamerag:<tag>]] ... [[/gamerag]]`) with
+  [mood tracking](mood.md) — see that doc for why a dedicated marker is used instead of
+  a markdown code fence.
 
 ## Streaming protocol
 
