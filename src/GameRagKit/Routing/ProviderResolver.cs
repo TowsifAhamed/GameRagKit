@@ -150,6 +150,45 @@ public sealed class ProviderResolver
         return new OllamaClient(httpClient, chatModel, embedModel);
     }
 
+    public ISpeechToText? TryCreateSpeechToText(NpcConfig config, ProviderRuntimeOptions runtimeOptions)
+    {
+        var voiceConfig = config.Providers.Voice?.SpeechToText;
+        var modelPath = runtimeOptions.SttModelPath ?? voiceConfig?.ModelPath;
+        if (string.IsNullOrWhiteSpace(modelPath))
+        {
+            return null;
+        }
+
+        var options = new WhisperCppOptions
+        {
+            ModelPath = modelPath,
+            ExecutablePath = runtimeOptions.SttExecutablePath ?? voiceConfig?.ExecutablePath ?? "whisper-cli",
+            Language = voiceConfig?.Language ?? "en",
+            Timeout = TimeSpan.FromSeconds(voiceConfig?.TimeoutSeconds ?? 60)
+        };
+
+        return new WhisperCppClient(options);
+    }
+
+    public ITextToSpeech? TryCreateTextToSpeech(NpcConfig config, ProviderRuntimeOptions runtimeOptions)
+    {
+        var voiceConfig = config.Providers.Voice?.TextToSpeech;
+        var voiceModelPath = runtimeOptions.TtsVoiceModelPath ?? voiceConfig?.VoiceModelPath;
+        if (string.IsNullOrWhiteSpace(voiceModelPath))
+        {
+            return null;
+        }
+
+        var options = new PiperTtsOptions
+        {
+            VoiceModelPath = voiceModelPath,
+            ExecutablePath = runtimeOptions.TtsExecutablePath ?? voiceConfig?.ExecutablePath ?? "piper",
+            Timeout = TimeSpan.FromSeconds(voiceConfig?.TimeoutSeconds ?? 60)
+        };
+
+        return new PiperTtsClient(options);
+    }
+
     private static LLamaSharpOptions BuildLLamaOptions(
         LocalProviderConfig localConfig,
         ProviderRuntimeOptions runtimeOptions,

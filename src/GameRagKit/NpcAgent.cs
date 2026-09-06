@@ -65,6 +65,10 @@ public sealed class NpcAgent : IAsyncDisposable
         _runtimeOptions.LocalEmbedModel = Environment.GetEnvironmentVariable("LOCAL_EMBED_MODEL") ?? _config.Providers.Local?.EmbedModel;
         _runtimeOptions.CloudChatModel = Environment.GetEnvironmentVariable("CLOUD_CHAT_MODEL") ?? _config.Providers.Cloud?.ChatModel;
         _runtimeOptions.CloudEmbedModel = Environment.GetEnvironmentVariable("CLOUD_EMBED_MODEL") ?? _config.Providers.Cloud?.EmbedModel;
+        _runtimeOptions.SttModelPath = Environment.GetEnvironmentVariable("STT_MODEL_PATH") ?? _config.Providers.Voice?.SpeechToText?.ModelPath;
+        _runtimeOptions.SttExecutablePath = Environment.GetEnvironmentVariable("STT_EXECUTABLE_PATH") ?? _config.Providers.Voice?.SpeechToText?.ExecutablePath;
+        _runtimeOptions.TtsVoiceModelPath = Environment.GetEnvironmentVariable("TTS_VOICE_MODEL_PATH") ?? _config.Providers.Voice?.TextToSpeech?.VoiceModelPath;
+        _runtimeOptions.TtsExecutablePath = Environment.GetEnvironmentVariable("TTS_EXECUTABLE_PATH") ?? _config.Providers.Voice?.TextToSpeech?.ExecutablePath;
 
         return this;
     }
@@ -166,6 +170,33 @@ public sealed class NpcAgent : IAsyncDisposable
         }
 
         return reply;
+    }
+
+    /// <summary>
+    /// Transcribes player speech, asks the NPC exactly as AskAsync would, and optionally
+    /// synthesizes the NPC's reply back to speech. Requires providers.voice.speech_to_text
+    /// (and, if <paramref name="synthesizeReply"/> is true, providers.voice.text_to_speech)
+    /// to be configured.
+    /// </summary>
+    public async Task<VoiceReply> AskVoiceAsync(
+        byte[] playerAudioWavBytes,
+        AskOptions? opts = null,
+        bool synthesizeReply = true,
+        CancellationToken cancellationToken = default)
+    {
+        var speechToText = _router.ResolveSpeechToText(_config, _runtimeOptions);
+        var transcript = await speechToText.TranscribeAsync(playerAudioWavBytes, cancellationToken).ConfigureAwait(false);
+
+        var reply = await AskAsync(transcript, opts, cancellationToken).ConfigureAwait(false);
+
+        byte[]? replyAudio = null;
+        if (synthesizeReply)
+        {
+            var textToSpeech = _router.ResolveTextToSpeech(_config, _runtimeOptions);
+            replyAudio = await textToSpeech.SynthesizeAsync(reply.Text, cancellationToken).ConfigureAwait(false);
+        }
+
+        return new VoiceReply(transcript, reply, replyAudio);
     }
 
     public async IAsyncEnumerable<StreamEvent> StreamAsync(string playerLine, AskOptions? opts = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)

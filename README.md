@@ -278,7 +278,7 @@ You receive:
 
 ### Authentication & metrics
 
-- Add `SERVICE_API_KEY` (or `SERVICE_BEARER_TOKEN`) to require `X-API-Key` or `Authorization: Bearer` on incoming requests. When set, `/ask`, `/ask/stream`, and `/ingest` require credentials while `/health` and `/metrics` stay public unless overridden via `SERVICE_AUTH_ALLOW`.
+- Add `SERVICE_API_KEY` (or `SERVICE_BEARER_TOKEN`) to require `X-API-Key` or `Authorization: Bearer` on incoming requests. When set, `/ask`, `/ask/stream`, `/ask/voice`, and `/ingest` require credentials while `/health` and `/metrics` stay public unless overridden via `SERVICE_AUTH_ALLOW`.
 - `GET /metrics` exposes Prometheus-compatible counters for ask/stream/ingest calls. Combine with `app.UseHttpMetrics()` (already enabled) to scrape latency and status labels.
 
 ## Embedded usage (Unity, dedicated servers)
