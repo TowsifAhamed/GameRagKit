@@ -1,5 +1,17 @@
 # Unreal Engine Integration for GameRagKit
 
+> **This folder is legacy.** The recommended way to integrate GameRagKit into Unreal is
+> now the installable plugin at
+> [`unreal-plugin/GameRagKit`](../../unreal-plugin/GameRagKit/README.md) — it fixes a
+> compile-breaking bug in `AskNpcLibrary.cpp` (it called Unreal's async HTTP API as if it
+> were synchronous), adds real incremental streaming (this folder's "streaming" support
+> buffers the whole response before parsing, so it never actually delivered a typewriter
+> effect), adds the `X-GameRAG-Protocol` header the server requires (missing here, so
+> requests using this folder's code get rejected with 400), and supports structured world
+> state and NPC actions. It has been compiled and verified against a real Unreal Engine
+> 5.8 installation (Editor + Development + Shipping targets, all succeeded). This folder
+> is kept for reference/older projects but will not receive new features.
+
 This directory contains ready-to-use C++ components for integrating GameRagKit NPCs into your Unreal Engine game.
 
 ## Quick Start

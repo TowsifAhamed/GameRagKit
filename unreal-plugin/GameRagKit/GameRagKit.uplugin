@@ -1,0 +1,24 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "GameRagKit",
+  "Description": "HTTP client for talking to a GameRagKit server: ask NPCs questions, stream responses for typewriter effects, send structured world state, and handle validated NPC actions.",
+  "Category": "AI",
+  "CreatedBy": "Towsif Ahamed",
+  "CreatedByURL": "https://github.com/TowsifAhamed/GameRagKit",
+  "DocsURL": "https://github.com/TowsifAhamed/GameRagKit/blob/main/unreal-plugin/GameRagKit/README.md",
+  "MarketplaceURL": "",
+  "SupportURL": "https://github.com/TowsifAhamed/GameRagKit/issues",
+  "EnabledByDefault": true,
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "GameRagKit",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "com.gameragkit.unity",
+  "version": "0.1.0",
+  "displayName": "GameRagKit Unity Client",
+  "description": "HTTP client for talking to a GameRagKit server: ask NPCs questions, stream responses for typewriter effects, send structured world state, and handle validated NPC actions.",
+  "unity": "2021.3",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "keywords": [
+    "npc",
+    "dialogue",
+    "ai",
+    "rag",
+    "llm"
+  ],
+  "author": {
+    "name": "Towsif Ahamed"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Dialogue",
+      "description": "Minimal TextMeshPro-based chat UI wired to an NPC via NpcDialogueManager.",
+      "path": "Samples~/BasicDialogue"
+    }
+  ]
+}

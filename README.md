@@ -94,8 +94,8 @@ GameRagKit/
 - **Getting Started?** → See [Quick Start](#getting-started) below
 - **Configuration Examples?** → [`examples/configs/`](examples/configs/)
 - **Provider Compatibility?** → [Provider Compatibility Guide](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) - Which cloud providers are supported?
-- **Unity Integration?** → [`samples/unity/`](samples/unity/)
-- **Unreal Integration?** → [`samples/unreal/`](samples/unreal/)
+- **Unity Integration?** → [`unity-package/com.gameragkit.unity/`](unity-package/com.gameragkit.unity/) (installable UPM package)
+- **Unreal Integration?** → [`unreal-plugin/GameRagKit/`](unreal-plugin/GameRagKit/) (installable plugin)
 - **Testing?** → [`tests/GameRagKit.Tests/`](tests/GameRagKit.Tests/)
 - **Issue Reports & Improvements?** → [`docs/2025-11-29/`](docs/2025-11-29/)
 
@@ -351,9 +351,10 @@ Routing rules combine config defaults with per-question overrides:
   - Ollama local setup (fully offline)
   - Hybrid routing examples
 
-### Integration Samples
-- **[samples/unity/](samples/unity/)** - Unity integration guide and C# scripts
-- **[samples/unreal/](samples/unreal/)** - Unreal Engine integration (C++/Blueprint examples)
+### Engine Integrations
+- **[unity-package/com.gameragkit.unity/](unity-package/com.gameragkit.unity/)** - Installable Unity package (UPM), real incremental streaming, actions, world state
+- **[unreal-plugin/GameRagKit/](unreal-plugin/GameRagKit/)** - Installable Unreal plugin, real incremental streaming, actions, world state
+- **[samples/unity/](samples/unity/)**, **[samples/unreal/](samples/unreal/)** - Legacy loose-script samples, kept for reference
 
 ### Documentation
 - **[docs/2025-11-29/](docs/2025-11-29/)** - Latest updates and issue reports
