@@ -27,6 +27,8 @@ Tip: add metadata by placing files under `world/`, `region/<id>/`, `faction/<id>
 
 `guard-north-gate.yaml` controls tone, mannerisms, and router defaults. Tweak `system_prompt`, `traits`, or `style`. Set `default_importance` higher for boss scenes so cloud models are used more often.
 
+Want the NPC to give items, start quests, or take other gameplay actions during dialogue? See [`docs/actions.md`](actions.md) for the `persona.actions` YAML format.
+
 ## 4. Rebuild the index
 
 Run the CLI after saving lore:

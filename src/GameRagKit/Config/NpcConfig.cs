@@ -36,6 +36,7 @@ public sealed record PersonaConfig
         = null;
     public double? DefaultImportance { get; init; }
         = null;
+    public List<ActionDefinition> Actions { get; init; } = new();
 }
 
 public sealed record RagConfig

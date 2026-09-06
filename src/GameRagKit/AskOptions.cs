@@ -1,3 +1,5 @@
+using GameRagKit.Actions;
+
 namespace GameRagKit;
 
 public sealed record AskOptions(
@@ -9,4 +11,7 @@ public sealed record AskOptions(
     bool ForceCloud = false,
     string? State = null);
 
-public sealed record AgentReply(string Text, string[] Sources, double[] Scores, bool FromCloud);
+public sealed record AgentReply(string Text, string[] Sources, double[] Scores, bool FromCloud)
+{
+    public IReadOnlyList<ActionCall> Actions { get; init; } = Array.Empty<ActionCall>();
+}

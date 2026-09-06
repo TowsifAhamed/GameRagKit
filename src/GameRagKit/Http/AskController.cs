@@ -1,3 +1,4 @@
+using GameRagKit.Actions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameRagKit.Http;
@@ -30,7 +31,8 @@ public sealed class AskController : ControllerBase
 
         var options = request.ToAskOptions();
         var reply = await agent.AskAsync(request.Question, options, cancellationToken).ConfigureAwait(false);
-        var response = new AskHttpResponse(reply.Text, reply.Sources, reply.Scores, reply.FromCloud);
+        var actions = reply.Actions.Select(a => new ActionCallPayload(a.Name, a.Args)).ToArray();
+        var response = new AskHttpResponse(reply.Text, reply.Sources, reply.Scores, reply.FromCloud, actions);
         return Ok(response);
     }
 }
@@ -61,4 +63,6 @@ public sealed record AskOptionsPayload
     public string? State { get; init; }
 }
 
-public sealed record AskHttpResponse(string Answer, string[] Sources, double[] Scores, bool FromCloud);
+public sealed record AskHttpResponse(string Answer, string[] Sources, double[] Scores, bool FromCloud, ActionCallPayload[] Actions);
+
+public sealed record ActionCallPayload(string Name, IReadOnlyDictionary<string, string> Args);
