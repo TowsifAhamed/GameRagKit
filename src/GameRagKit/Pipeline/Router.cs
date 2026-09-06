@@ -84,6 +84,18 @@ public sealed class Router
         return importance >= 0.5 ? cloud : local;
     }
 
+    public ISpeechToText ResolveSpeechToText(NpcConfig config, ProviderRuntimeOptions runtime)
+    {
+        return _resolver.TryCreateSpeechToText(config, runtime)
+            ?? throw new InvalidOperationException("No speech-to-text provider configured. Set providers.voice.speech_to_text.model_path.");
+    }
+
+    public ITextToSpeech ResolveTextToSpeech(NpcConfig config, ProviderRuntimeOptions runtime)
+    {
+        return _resolver.TryCreateTextToSpeech(config, runtime)
+            ?? throw new InvalidOperationException("No text-to-speech provider configured. Set providers.voice.text_to_speech.voice_model_path.");
+    }
+
     private static IChatProvider Require(IChatProvider? provider, string message)
         => provider ?? throw new InvalidOperationException(message);
 }

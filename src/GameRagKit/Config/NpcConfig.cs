@@ -68,6 +68,8 @@ public sealed record ProvidersConfig
         = new();
     public CloudProviderConfig? Cloud { get; init; }
         = new();
+    public VoiceConfig? Voice { get; init; }
+        = null;
 }
 
 public sealed record RoutingConfig

@@ -16,3 +16,5 @@ public sealed record AgentReply(string Text, string[] Sources, double[] Scores, 
 {
     public IReadOnlyList<ActionCall> Actions { get; init; } = Array.Empty<ActionCall>();
 }
+
+public sealed record VoiceReply(string Transcript, AgentReply Reply, byte[]? ReplyAudioWavBytes);

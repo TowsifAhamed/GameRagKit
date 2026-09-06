@@ -21,4 +21,8 @@ public sealed class ProviderRuntimeOptions
     public uint? LocalBatchSize { get; set; }
     public uint? LocalMicroBatchSize { get; set; }
     public int? LocalMaxTokens { get; set; }
+    public string? SttModelPath { get; set; }
+    public string? SttExecutablePath { get; set; }
+    public string? TtsVoiceModelPath { get; set; }
+    public string? TtsExecutablePath { get; set; }
 }
