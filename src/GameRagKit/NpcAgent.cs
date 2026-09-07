@@ -28,6 +28,7 @@ public sealed class NpcAgent : IAsyncDisposable
     private readonly IVectorStore _vectorStore;
     private readonly Router _router;
     private readonly Retriever _retriever;
+    private readonly ResolvedPersona _resolvedPersona;
     private readonly ProviderRuntimeOptions _runtimeOptions = new();
     private readonly ConcurrentDictionary<string, string> _sourceHashes = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SnapshotEntry> _snapshots = new(StringComparer.OrdinalIgnoreCase);
@@ -58,6 +59,7 @@ public sealed class NpcAgent : IAsyncDisposable
             ? new Dictionary<string, string>(config.Rag.Filters, StringComparer.OrdinalIgnoreCase)
             : null;
         _retriever = new Retriever(vectorStore, config.Persona, filters);
+        _resolvedPersona = PersonaInheritanceResolver.Resolve(configDirectory, config.Persona);
     }
 
     public NpcAgent UseEnv()
@@ -189,7 +191,7 @@ public sealed class NpcAgent : IAsyncDisposable
     private async Task<(string CleanedText, IReadOnlyList<ActionCall> Actions, MoodState? Mood)> ProcessReplyAsync(string rawText, CancellationToken cancellationToken)
     {
         var parsed = GameRagBlockParser.Parse(rawText);
-        var actionResult = ActionParser.Validate(parsed.Blocks, _config.Persona.Actions);
+        var actionResult = ActionParser.Validate(parsed.Blocks, _resolvedPersona.Actions);
         var moodResult = MoodParser.Validate(parsed.Blocks, DateTimeOffset.UtcNow);
 
         var mood = _currentMood;
@@ -368,11 +370,11 @@ public sealed class NpcAgent : IAsyncDisposable
     private async Task<string> BuildSystemPromptAsync(AskOptions opts, CancellationToken cancellationToken)
     {
         var promptBuilder = new StringBuilder();
-        promptBuilder.AppendLine(_config.Persona.SystemPrompt);
+        promptBuilder.AppendLine(_resolvedPersona.SystemPrompt);
         promptBuilder.AppendLine("Stay in character. Avoid meta-talk.");
-        if (!string.IsNullOrWhiteSpace(_config.Persona.Style))
+        if (!string.IsNullOrWhiteSpace(_resolvedPersona.Style))
         {
-            promptBuilder.AppendLine($"Style: {_config.Persona.Style}");
+            promptBuilder.AppendLine($"Style: {_resolvedPersona.Style}");
         }
 
         if (!opts.InCharacter)
@@ -382,12 +384,12 @@ public sealed class NpcAgent : IAsyncDisposable
 
         promptBuilder.AppendLine("If the provided sources do not contain the answer, say you cannot determine it from available evidence.");
 
-        if (_config.Persona.Actions.Count > 0)
+        if (_resolvedPersona.Actions.Count > 0)
         {
-            AppendActionInstructions(promptBuilder, _config.Persona.Actions);
+            AppendActionInstructions(promptBuilder, _resolvedPersona.Actions);
         }
 
-        if (_config.Persona.MoodTracking)
+        if (_resolvedPersona.MoodTracking)
         {
             var mood = await GetCurrentMoodAsync(cancellationToken).ConfigureAwait(false);
             AppendMoodInstructions(promptBuilder, mood);
@@ -512,19 +514,9 @@ public sealed class NpcAgent : IAsyncDisposable
             ["source"] = sourcePath
         };
 
-        if (!string.IsNullOrWhiteSpace(scope.RegionId))
+        foreach (var tier in scope.TierPath)
         {
-            metadata["region"] = scope.RegionId!;
-        }
-
-        if (!string.IsNullOrWhiteSpace(scope.FactionId))
-        {
-            metadata["faction"] = scope.FactionId!;
-        }
-
-        if (!string.IsNullOrWhiteSpace(_config.Persona.WorldId))
-        {
-            metadata["world"] = _config.Persona.WorldId!;
+            metadata[tier.Name] = tier.Id;
         }
 
         if (source.Metadata != null)

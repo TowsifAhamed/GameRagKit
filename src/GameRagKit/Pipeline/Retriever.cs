@@ -56,14 +56,20 @@ public sealed class Retriever
 
     private IReadOnlyList<(string Collection, int Limit)> BuildScopes(int topK)
     {
-        var scopes = new List<(string Collection, int Limit)>
+        var scopes = new List<(string Collection, int Limit)>();
+        var tiers = _persona.TierPath;
+
+        for (var i = 0; i < tiers.Count; i++)
         {
-            (IndexScopeKey.ForWorld(_persona).Scope, string.IsNullOrWhiteSpace(_persona.WorldId) ? 0 : 2),
-            (IndexScopeKey.ForRegion(_persona).Scope, string.IsNullOrWhiteSpace(_persona.RegionId) ? 0 : 1),
-            (IndexScopeKey.ForFaction(_persona).Scope, string.IsNullOrWhiteSpace(_persona.FactionId) ? 0 : 1),
-            (IndexScopeKey.ForPersona(_persona).Scope, topK),
-            (IndexScopeKey.ForMemory(_persona).Scope, 1)
-        };
+            // Outermost tier (e.g. world) contributes least, tiers closer to the NPC
+            // contribute more -- matches the original world=2/region=1/faction=1 weighting,
+            // generalized to any depth: the tier closest to npc gets 2, everything above it 1.
+            var limit = i == tiers.Count - 1 ? 2 : 1;
+            scopes.Add((IndexScopeKey.ForTier(_persona, tiers[i].Name).Scope, limit));
+        }
+
+        scopes.Add((IndexScopeKey.ForPersona(_persona).Scope, topK));
+        scopes.Add((IndexScopeKey.ForMemory(_persona).Scope, 1));
 
         return scopes;
     }
