@@ -2,6 +2,12 @@
 
 This guide walks writers and quest designers through updating NPC lore without touching engine code.
 
+> **Prefer a UI over hand-editing YAML and the terminal?** `gamerag studio` gives you a
+> browser-based NPC canvas, a form for `system_prompt`/`style`/`mood_tracking`, and an
+> in-browser chat tester — see [`docs/studio.md`](studio.md). Steps 3 and 5 below are what
+> it replaces; lore file editing (step 2) and rebuilding indexes (step 4) still happen the
+> same way either way.
+
 ## 1. Check out the repo
 
 Ask your engineer for the `NPCs` folder. Every NPC has a YAML file plus lore sources.
