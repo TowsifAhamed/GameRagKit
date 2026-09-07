@@ -76,7 +76,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
                         embedding = EXCLUDED.embedding;
                 ";
 
-            command.Parameters.AddWithValue("key", record.Key);
+            command.Parameters.AddWithValue("key", NpgsqlDbType.Uuid, Guid.Parse(record.Key));
             command.Parameters.AddWithValue("collection", record.Collection);
             command.Parameters.AddWithValue("tags", NpgsqlDbType.Jsonb, JsonSerializer.Serialize(record.Tags ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
             command.Parameters.AddWithValue("text", record.Text);
@@ -155,7 +155,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
 
         while (await reader.ReadAsync(ct).ConfigureAwait(false))
         {
-            var key = reader.GetString(0);
+            var key = reader.GetFieldValue<Guid>(0).ToString();
             var text = reader.GetString(1);
             var tagsJson = reader.GetString(2);
             var score = reader.IsDBNull(3) ? (double?)null : reader.GetDouble(3);
@@ -293,7 +293,7 @@ public sealed class PgVectorStore : IVectorStore, IAsyncDisposable
         }
 
         var typeModifier = Convert.ToInt32(result, CultureInfo.InvariantCulture);
-        var existingDims = typeModifier - 4; // pgvector stores size as typmod = 4 + dimensions
+        var existingDims = typeModifier; // pgvector's typmod IS the dimension count directly (see vector_typmod_in in pgvector's source), no offset
         if (existingDims != _dims)
         {
             throw new InvalidOperationException($"Existing embedding dimension {existingDims} does not match configured dimension {_dims} for table {_tableName}.");
