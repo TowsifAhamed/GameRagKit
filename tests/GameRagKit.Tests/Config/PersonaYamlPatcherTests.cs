@@ -178,7 +178,8 @@ public sealed class PersonaYamlPatcherTests
 
         config.Persona.Id.Should().Be("guard-north-gate");
         config.Persona.Style.Should().Be("gruff and impatient");
-        config.Persona.SystemPrompt.Trim().Should().Be("A short new prompt for testing round-trip parsing.");
+        config.Persona.SystemPrompt.Should().NotBeNull();
+        config.Persona.SystemPrompt!.Trim().Should().Be("A short new prompt for testing round-trip parsing.");
         config.Persona.MoodTracking.Should().BeTrue();
         config.Rag.Sources.Should().ContainSingle(s => s.File == "world/keep.md");
         config.Rag.ChunkSize.Should().Be(450);

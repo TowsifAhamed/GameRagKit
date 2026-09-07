@@ -24,10 +24,11 @@ public sealed class NpcConfig
 public sealed record PersonaConfig
 {
     public string Id { get; init; } = string.Empty;
-    public string SystemPrompt { get; init; } = string.Empty;
+    public string? SystemPrompt { get; init; }
+        = null;
     public List<string> Traits { get; init; } = new();
     public string? Style { get; init; }
-        = "concise";
+        = null;
     public string? RegionId { get; init; }
         = null;
     public string? FactionId { get; init; }
