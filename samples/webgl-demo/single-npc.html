@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GameRagKit Demo — Single NPC</title>
+  <link rel="stylesheet" href="shared/demo-ui.css" />
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <div class="title">Riverside — North Gate</div>
+    Click to look around &middot; WASD to move &middot; E to talk &middot; Esc to leave dialogue
+  </div>
+
+  <div id="interact-prompt" hidden></div>
+
+  <div id="dialogue-panel" hidden>
+    <div id="dialogue-npc-name"></div>
+    <div id="dialogue-log"></div>
+    <form id="dialogue-form">
+      <input id="dialogue-input" type="text" placeholder="Say something..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    <div id="dialogue-hint">Esc to end conversation</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="shared/game-engine.js"></script>
+  <script src="shared/dialogue-controller.js"></script>
+  <script>
+    const SERVER_URL = window.GAMERAG_SERVER_URL || "http://localhost:5280";
+
+    const game = GameRagDemo.createGame({
+      canvas: document.getElementById("game-canvas"),
+      serverUrl: SERVER_URL,
+      groundSize: 40,
+      spawnPosition: { x: 0, y: 0, z: 10 }
+    });
+
+    // A simple gate structure so the guard has something to stand in front of.
+    game.addBuilding({ position: { x: -6, z: -4 }, width: 4, depth: 4, height: 5, color: 0x3a4152 });
+    game.addBuilding({ position: { x: 6, z: -4 }, width: 4, depth: 4, height: 5, color: 0x3a4152 });
+
+    game.addNpc({
+      npcId: "guard-north-gate",
+      label: "Jake, North Gate Guard",
+      color: 0x6ea8fe,
+      position: { x: 0, z: -4 },
+      greeting: "Halt. State your business at the North Gate."
+    });
+
+    GameRagDemo.attachDialogueController(game);
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GameRagKit Demo — City</title>
+  <link rel="stylesheet" href="shared/demo-ui.css" />
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <div class="title">Riverside — Town Square (5 NPCs)</div>
+    Click to look around &middot; WASD to move &middot; E to talk &middot; Esc to leave dialogue
+  </div>
+
+  <div id="interact-prompt" hidden></div>
+
+  <div id="dialogue-panel" hidden>
+    <div id="dialogue-npc-name"></div>
+    <div id="dialogue-log"></div>
+    <form id="dialogue-form">
+      <input id="dialogue-input" type="text" placeholder="Say something..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    <div id="dialogue-hint">Esc to end conversation</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="shared/game-engine.js"></script>
+  <script src="shared/dialogue-controller.js"></script>
+  <script>
+    const SERVER_URL = window.GAMERAG_SERVER_URL || "http://localhost:5280";
+
+    const game = GameRagDemo.createGame({
+      canvas: document.getElementById("game-canvas"),
+      serverUrl: SERVER_URL,
+      groundSize: 90,
+      spawnPosition: { x: 0, y: 0, z: 22 }
+    });
+
+    // A small town square: four buildings framing a central plaza, one NPC per building
+    // plus a fifth wandering the square itself -- proves multiple independent NPCs with
+    // distinct personas all work correctly at once, with no cross-talk between them.
+    const buildings = [
+      { id: "blacksmith", position: { x: -14, z: -10 }, width: 8, depth: 7, height: 5, color: 0x4a3b2a },
+      { id: "tavern", position: { x: 14, z: -10 }, width: 9, depth: 7, height: 6, color: 0x5a3a2a },
+      { id: "chapel", position: { x: -14, z: 12 }, width: 7, depth: 9, height: 7, color: 0x3a3f52 },
+      { id: "market", position: { x: 14, z: 12 }, width: 8, depth: 6, height: 4, color: 0x3a4152 }
+    ];
+
+    buildings.forEach((b) => game.addBuilding(b));
+
+    game.addNpc({
+      npcId: "blacksmith-bram",
+      label: "Bram the Blacksmith",
+      color: 0xd48a3a,
+      position: { x: -14, z: -4 },
+      greeting: "Need something forged, traveler?"
+    });
+
+    game.addNpc({
+      npcId: "tavern-keeper-mira",
+      label: "Mira, Tavern Keeper",
+      color: 0xd45a5a,
+      position: { x: 14, z: -4 },
+      greeting: "Welcome in! Ale's fresh, rumors are fresher."
+    });
+
+    game.addNpc({
+      npcId: "priest-aldric",
+      label: "Father Aldric",
+      color: 0x8a8ad4,
+      position: { x: -14, z: 6 },
+      greeting: "Peace be with you. What troubles your heart?"
+    });
+
+    game.addNpc({
+      npcId: "merchant-yara",
+      label: "Yara the Merchant",
+      color: 0x5ac27a,
+      position: { x: 14, z: 6 },
+      greeting: "Finest goods this side of the river! Take a look."
+    });
+
+    game.addNpc({
+      npcId: "town-crier-oswin",
+      label: "Oswin, Town Crier",
+      color: 0xd4c23a,
+      position: { x: 0, z: 0 },
+      greeting: "Hear ye! Ask, and I shall tell what news travels the roads."
+    });
+
+    GameRagDemo.attachDialogueController(game);
+  </script>
+</body>
+</html>

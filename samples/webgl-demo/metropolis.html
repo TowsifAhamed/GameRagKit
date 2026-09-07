@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GameRagKit Demo — Metropolis</title>
+  <link rel="stylesheet" href="shared/demo-ui.css" />
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <div class="title">Metropolis — <span id="crowd-count"></span> talkable figures, <span id="roster-count"></span> shared backend NPCs</div>
+    Click to look around &middot; WASD to move &middot; E to talk to a highlighted figure &middot; Esc to leave dialogue
+  </div>
+
+  <div id="interact-prompt" hidden></div>
+
+  <div id="dialogue-panel" hidden>
+    <div id="dialogue-npc-name"></div>
+    <div id="dialogue-log"></div>
+    <form id="dialogue-form">
+      <input id="dialogue-input" type="text" placeholder="Say something..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    <div id="dialogue-hint">Esc to end conversation</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="shared/game-engine.js"></script>
+  <script src="shared/dialogue-controller.js"></script>
+  <script src="shared/metropolis-roster.js"></script>
+  <script>
+    const SERVER_URL = window.GAMERAG_SERVER_URL || "http://localhost:5280";
+    const GROUND_SIZE = 220;
+    const CROWD_COUNT = 900;
+
+    const game = GameRagDemo.createGame({
+      canvas: document.getElementById("game-canvas"),
+      serverUrl: SERVER_URL,
+      groundSize: GROUND_SIZE,
+      groundColor: 0x22262f,
+      spawnPosition: { x: 0, y: 0, z: 30 }
+    });
+
+    // A simple street grid of city blocks: alternating rows/columns of buildings with
+    // gaps as streets, so the crowd and player have somewhere to walk between blocks.
+    const blockSize = 14;
+    const streetWidth = 8;
+    const cell = blockSize + streetWidth;
+    const gridExtent = 3; // -3..3 blocks in each direction
+
+    for (let bx = -gridExtent; bx <= gridExtent; bx++) {
+      for (let bz = -gridExtent; bz <= gridExtent; bz++) {
+        if (bx === 0 && bz === 0) continue; // leave the center block open as a plaza
+        const height = 8 + ((Math.abs(bx) + Math.abs(bz)) % 4) * 5;
+        const hue = 0.58 + ((bx * 3 + bz * 7) % 10) * 0.01;
+        game.addBuilding({
+          position: { x: bx * cell, z: bz * cell },
+          width: blockSize,
+          depth: blockSize,
+          height,
+          color: new THREE.Color().setHSL(hue, 0.15, 0.28).getHex()
+        });
+      }
+    }
+
+    // The cluster/archetype pattern: a small, bounded set of real backend NPCs (see
+    // scripts/generate-metropolis-npcs.js, roster.length of them -- one per profession),
+    // shared across every crowd figure. Every figure below is individually talkable, but
+    // each is tagged with one of these archetype ids at spawn, so talking to any of the
+    // CROWD_COUNT figures fans in to just roster.length real NpcAgents -- the backend load
+    // (LLM calls, embeddings, memory) stays fixed no matter how large the crowd gets.
+    const roster = window.GAMERAG_METROPOLIS_ROSTER || [];
+    const npcColors = [0x6ea8fe, 0xd48a3a, 0xd45a5a, 0x5ac27a, 0xd4c23a, 0x8a8ad4];
+    const archetypes = roster.map((entry, i) => ({
+      id: entry.id,
+      label: entry.role,
+      greeting: "Oh, hey there.",
+      color: npcColors[i % npcColors.length]
+    }));
+
+    game.addCrowd({
+      count: CROWD_COUNT,
+      bounds: { minX: -GROUND_SIZE / 2 + 4, maxX: GROUND_SIZE / 2 - 4, minZ: -GROUND_SIZE / 2 + 4, maxZ: GROUND_SIZE / 2 - 4 },
+      colors: archetypes.length > 0 ? archetypes.map((a) => a.color) : undefined,
+      archetypes
+    });
+
+    document.getElementById("crowd-count").textContent = CROWD_COUNT;
+    document.getElementById("roster-count").textContent = roster.length;
+
+    GameRagDemo.attachDialogueController(game);
+  </script>
+</body>
+</html>
