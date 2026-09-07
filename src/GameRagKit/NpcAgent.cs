@@ -514,19 +514,9 @@ public sealed class NpcAgent : IAsyncDisposable
             ["source"] = sourcePath
         };
 
-        if (!string.IsNullOrWhiteSpace(scope.RegionId))
+        foreach (var tier in scope.TierPath)
         {
-            metadata["region"] = scope.RegionId!;
-        }
-
-        if (!string.IsNullOrWhiteSpace(scope.FactionId))
-        {
-            metadata["faction"] = scope.FactionId!;
-        }
-
-        if (!string.IsNullOrWhiteSpace(_config.Persona.WorldId))
-        {
-            metadata["world"] = _config.Persona.WorldId!;
+            metadata[tier.Name] = tier.Id;
         }
 
         if (source.Metadata != null)

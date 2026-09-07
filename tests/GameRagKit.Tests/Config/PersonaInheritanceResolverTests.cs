@@ -29,6 +29,40 @@ public sealed class PersonaInheritanceResolverTests : IDisposable
     }
 
     [Fact]
+    public void Resolve_Walks_A_Fully_Custom_Dev_Declared_Tier_Chain_Not_Just_World_Region_Faction()
+    {
+        WriteFragment("continent", "aros", """
+        system_prompt: The continent of Aros is scarred by an old war.
+        """);
+        WriteFragment("kingdom", "eldoria", """
+        system_prompt: The kingdom of Eldoria prizes honor above wealth.
+        """);
+        WriteFragment("guild", "merchants-guild", """
+        system_prompt: The Merchants Guild speaks in the language of coin.
+        """);
+
+        var persona = new PersonaConfig
+        {
+            Id = "shop-clerk",
+            Tiers = new List<PersonaTier>
+            {
+                new("continent", "aros"),
+                new("kingdom", "eldoria"),
+                new("guild", "merchants-guild")
+            },
+            SystemPrompt = "You personally undercharge friends."
+        };
+
+        var resolved = PersonaInheritanceResolver.Resolve(_root, persona);
+
+        resolved.SystemPrompt.Should().Be(
+            "The continent of Aros is scarred by an old war.\n\n" +
+            "The kingdom of Eldoria prizes honor above wealth.\n\n" +
+            "The Merchants Guild speaks in the language of coin.\n\n" +
+            "You personally undercharge friends.");
+    }
+
+    [Fact]
     public void Resolve_With_No_Tier_Ids_And_No_Npc_Prompt_Produces_Empty_System_Prompt()
     {
         var persona = new PersonaConfig { Id = "solo-npc" };

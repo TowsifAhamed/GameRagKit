@@ -33,19 +33,9 @@ public static class PersonaInheritanceResolver
     {
         var fragments = new List<PersonaFragment>();
 
-        if (!string.IsNullOrWhiteSpace(persona.WorldId))
+        foreach (var tier in persona.TierPath)
         {
-            AddFragmentIfExists(fragments, configDirectory, "world", persona.WorldId);
-        }
-
-        if (!string.IsNullOrWhiteSpace(persona.RegionId))
-        {
-            AddFragmentIfExists(fragments, configDirectory, "region", persona.RegionId);
-        }
-
-        if (!string.IsNullOrWhiteSpace(persona.FactionId))
-        {
-            AddFragmentIfExists(fragments, configDirectory, "faction", persona.FactionId);
+            AddFragmentIfExists(fragments, configDirectory, tier.Name, tier.Id);
         }
 
         var systemPromptParts = fragments

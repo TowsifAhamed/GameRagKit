@@ -35,10 +35,78 @@ public sealed record PersonaConfig
         = null;
     public string? WorldId { get; init; }
         = null;
+
+    /// <summary>
+    /// A dev-declared, arbitrary-depth hierarchy above this NPC (e.g.
+    /// [{name: continent, id: aros}, {name: kingdom, id: eldoria}, {name: guild, id: city-guard}]),
+    /// outermost tier first. When set, this replaces world_id/region_id/faction_id entirely --
+    /// use one or the other, not both. When unset, TierPath below falls back to the fixed
+    /// world/region/faction shape built from those three fields for backward compatibility.
+    /// </summary>
+    public List<PersonaTier>? Tiers { get; init; }
+        = null;
+
     public double? DefaultImportance { get; init; }
         = null;
     public List<ActionDefinition> Actions { get; init; } = new();
     public bool MoodTracking { get; init; } = false;
+
+    /// <summary>
+    /// The effective tier hierarchy for this NPC, outermost first: either the explicit
+    /// Tiers list if the dev declared one, or the fixed world/region/faction fields
+    /// expanded into the same shape (skipping any that are unset) for anything that
+    /// still uses the original 3-tier fields. This is what IndexScopeKey, Retriever, and
+    /// PersonaInheritanceResolver actually walk -- they don't know about world/region/
+    /// faction as special names, just this ordered list.
+    /// </summary>
+    [YamlIgnore]
+    public IReadOnlyList<PersonaTier> TierPath
+    {
+        get
+        {
+            if (Tiers is { Count: > 0 })
+            {
+                return Tiers;
+            }
+
+            var tiers = new List<PersonaTier>();
+            if (!string.IsNullOrWhiteSpace(WorldId))
+            {
+                tiers.Add(new PersonaTier("world", WorldId));
+            }
+
+            if (!string.IsNullOrWhiteSpace(RegionId))
+            {
+                tiers.Add(new PersonaTier("region", RegionId));
+            }
+
+            if (!string.IsNullOrWhiteSpace(FactionId))
+            {
+                tiers.Add(new PersonaTier("faction", FactionId));
+            }
+
+            return tiers;
+        }
+    }
+}
+
+/// <summary>
+/// One level of a dev-declared persona/lore hierarchy, e.g. {name: faction, id: city-guard}.
+/// Name is a free-form label (folder name under configDirectory and metadata/scope key
+/// prefix); Id is the specific instance of that tier this NPC belongs to.
+/// </summary>
+public sealed record PersonaTier
+{
+    public string Name { get; init; } = string.Empty;
+    public string Id { get; init; } = string.Empty;
+
+    public PersonaTier() { }
+
+    public PersonaTier(string name, string id)
+    {
+        Name = name;
+        Id = id;
+    }
 }
 
 public sealed record RagConfig
