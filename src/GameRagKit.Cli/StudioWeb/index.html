@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GameRagKit Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="app-header">
+    <h1>GameRagKit Studio</h1>
+    <span id="npc-count"></span>
+  </header>
+
+  <main>
+    <canvas id="npc-canvas"></canvas>
+    <div id="canvas-hint">Scroll to zoom &middot; Drag background to pan &middot; Drag a node to reposition &middot; Click a node to edit</div>
+  </main>
+
+  <aside id="side-panel" hidden>
+    <div class="panel-header">
+      <h2 id="panel-npc-name"></h2>
+      <button id="panel-close" aria-label="Close">&times;</button>
+    </div>
+
+    <section class="panel-section">
+      <h3>Persona</h3>
+      <label>
+        System prompt
+        <textarea id="field-system-prompt" rows="5"></textarea>
+      </label>
+      <label>
+        Style
+        <input id="field-style" type="text" />
+      </label>
+      <label class="checkbox-label">
+        <input id="field-mood-tracking" type="checkbox" />
+        Mood tracking
+      </label>
+      <div id="save-status" role="status"></div>
+      <button id="save-button">Save changes</button>
+    </section>
+
+    <section class="panel-section">
+      <h3>Chat tester</h3>
+      <div id="chat-log"></div>
+      <form id="chat-form">
+        <input id="chat-input" type="text" placeholder="Ask the NPC something..." autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </aside>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -341,6 +341,7 @@ Routing rules combine config defaults with per-question overrides:
 | `gamerag chat --npc <file> [--question <text>]` | Quick smoke test for designers/writers. |
 | `gamerag serve --config <dir> [--port <n>]` | Launch a tiny HTTP service (`POST /ask`). |
 | `gamerag pack <dir> [--output <file>]` | Produce a deployable bundle (configs + lore + `.gamerag` indexes). |
+| `gamerag studio --config <dir> [--port <n>]` | Launch a local web UI for editing personas and testing chat — see [docs/studio.md](docs/studio.md). |
 
 ## Documentation & Examples
 
