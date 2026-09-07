@@ -1,0 +1,15 @@
+.git/
+.github/
+bin/
+obj/
+**/bin/
+**/obj/
+.gamerag/
+*.md
+!README.md
+tests/
+.vscode/
+.idea/
+node_modules/
+unity-package/
+unreal-plugin/

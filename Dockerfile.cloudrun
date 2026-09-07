@@ -1,0 +1,27 @@
+# Cloud Run deploy image. Differs from the root Dockerfile in two ways Cloud Run
+# specifically requires:
+#   1. Listens on $PORT (Cloud Run injects this at runtime; it is not fixed at 8080).
+#   2. Bakes NPC configs into the image instead of expecting a mounted volume, since
+#      Cloud Run does not support host volume mounts. Fork this repo, replace
+#      deploy/cloudrun-config with your own NPCs, and rebuild to deploy your own
+#      personas -- see docs/deploy-cloud-run.md.
+#
+# The bundled example NPC (deploy/cloudrun-config) deliberately uses cloud_only routing,
+# not samples/example-npcs' local-Ollama default -- there is no local Ollama process to
+# talk to in a Cloud Run container, so that config would crash on every request.
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY src ./src
+RUN dotnet restore src/GameRagKit.Cli/GameRagKit.Cli.csproj
+RUN dotnet publish src/GameRagKit.Cli/GameRagKit.Cli.csproj -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish ./
+COPY deploy/cloudrun-config ./config
+
+# Cloud Run sets $PORT at runtime and expects the container to listen on it. Shell form
+# is needed for $PORT to actually expand, but `exec` replaces the shell with the dotnet
+# process so it still receives SIGTERM directly for Cloud Run's graceful shutdown.
+ENV PORT=8080
+CMD exec dotnet GameRagKit.Cli.dll serve --config /app/config --port $PORT

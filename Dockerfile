@@ -1,11 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY GameRagKit.sln ./
 COPY src ./src
-COPY docs ./docs
-COPY samples ./samples
-COPY docker ./docker
-RUN dotnet restore GameRagKit.sln
+RUN dotnet restore src/GameRagKit.Cli/GameRagKit.Cli.csproj
 RUN dotnet publish src/GameRagKit.Cli/GameRagKit.Cli.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
