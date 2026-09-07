@@ -358,6 +358,7 @@ Routing rules combine config defaults with per-question overrides:
 - **[samples/unity/](samples/unity/)**, **[samples/unreal/](samples/unreal/)** - Legacy loose-script samples, kept for reference
 
 ### Documentation
+- **[docs/deploy-cloud-run.md](docs/deploy-cloud-run.md)** - Deploy your own free instance (Google Cloud Run + Neon Postgres, $0 within free tier limits)
 - **[docs/2025-11-29/](docs/2025-11-29/)** - Latest updates and issue reports
   - [PROVIDER_COMPATIBILITY.md](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) - Which cloud providers are supported?
   - [ISSUES_AND_IMPROVEMENTS.md](docs/2025-11-29/ISSUES_AND_IMPROVEMENTS.md) - Detailed analysis and recommendations
