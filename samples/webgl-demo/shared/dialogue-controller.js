@@ -74,6 +74,7 @@
       if (event.code === "KeyE") {
         const npc = game.getClosestNpc();
         if (npc) {
+          event.preventDefault();
           openDialogue(npc);
         }
       }

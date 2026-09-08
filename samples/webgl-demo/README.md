@@ -4,6 +4,10 @@ Three real Three.js game scenes proving GameRagKit NPCs work inside an actual fi
 game environment, not just an admin tool — walk around, approach an NPC, and talk to it
 using the real `/ask` endpoint.
 
+**[Try it live](https://gameragkit.up.railway.app/)** — no setup required. Hosting and LLM
+costs for this demo are paid out of pocket; see [Support this project](../../README.md#support-this-project)
+if you'd like to help keep it running.
+
 - **`single-npc.html`** — one NPC (the North Gate guard) in a small courtyard, standing in
   front of a real gate structure (two castle-kit towers + wall segments flanking a gate
   archway). Warm, low-angle dawn/dusk lighting and a muted autumn-toned ground give this

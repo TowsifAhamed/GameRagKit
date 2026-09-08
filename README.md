@@ -118,7 +118,11 @@ See the [complete configuration guide](examples/configs/README.md) for model det
 
 ## GameRagKit in Action
 
-Want to see GameRagKit in action? Check out the **[GameRagKit Demo](https://github.com/TowsifAhamed/gameragkit-demo)** - a working example application that demonstrates real-world NPC conversations with both cloud and local providers.
+**[Try the WebGL demo live](https://gameragkit.up.railway.app/)** - three real Three.js
+game scenes with GameRagKit NPCs you can walk up to and talk to in the browser, no setup
+required. See [samples/webgl-demo](samples/webgl-demo/) for the source.
+
+Want to see GameRagKit in action as a library? Check out the **[GameRagKit Demo](https://github.com/TowsifAhamed/gameragkit-demo)** - a working example application that demonstrates real-world NPC conversations with both cloud and local providers.
 
 ### Demo Screenshots
 
