@@ -122,6 +122,11 @@ See the [complete configuration guide](examples/configs/README.md) for model det
 game scenes with GameRagKit NPCs you can walk up to and talk to in the browser, no setup
 required. See [samples/webgl-demo](samples/webgl-demo/) for the source.
 
+| | |
+|---|---|
+| ![Riverside - North Gate guard dialogue](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/docs/images/webgl-riverside-gate.png) | ![Riverside - Town Square with 5 NPCs](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/docs/images/webgl-riverside-square.png) |
+| ![Metropolis - 900 talkable figures, city maintenance worker](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/docs/images/webgl-metropolis-1.png) | ![Metropolis - 900 talkable figures, office worker on lunch break](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/docs/images/webgl-metropolis-2.png) |
+
 Want to see GameRagKit in action as a library? Check out the **[GameRagKit Demo](https://github.com/TowsifAhamed/gameragkit-demo)** - a working example application that demonstrates real-world NPC conversations with both cloud and local providers.
 
 ### Demo Screenshots
