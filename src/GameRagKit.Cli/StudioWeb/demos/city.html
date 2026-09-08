@@ -16,6 +16,19 @@
     <div class="quest-hint">A royal messenger stayed at the tavern a few nights ago and left something behind. Talk to Mira, the tavern keeper — she might know more.</div>
   </div>
 
+  <div id="support-banner">
+    <span class="close-btn" id="support-banner-close">&times;</span>
+    Hosting and LLM costs for this demo are paid out of pocket. If GameRagKit is useful
+    to you, please consider supporting it via
+    <a href="https://github.com/sponsors/TowsifAhamed" target="_blank" rel="noopener">GitHub Sponsors</a>
+    or RedotPay (ID: 1236302071).
+  </div>
+  <script>
+    document.getElementById("support-banner-close").addEventListener("click", () => {
+      document.getElementById("support-banner").remove();
+    });
+  </script>
+
   <div id="interact-prompt" hidden></div>
 
   <div id="dialogue-panel" hidden>

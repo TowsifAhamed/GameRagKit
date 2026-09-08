@@ -80,10 +80,21 @@ To just try the bundled example NPC first, skip this step.
 
 ## 3. Deploy to Cloud Run
 
+`gcloud run deploy --source` always looks for a file literally named `Dockerfile` in the
+build context — it has no flag to point at a differently-named one, and this repo's root
+`Dockerfile` is for local dev, not Cloud Run. So deploying from `Dockerfile.cloudrun`
+needs two steps: build the image with Cloud Build using the bundled
+[`cloudbuild.cloudrun.yaml`](../cloudbuild.cloudrun.yaml) (which explicitly builds from
+`Dockerfile.cloudrun`), then deploy that image to Cloud Run.
+
 ```bash
+# 1. Build the image from Dockerfile.cloudrun via Cloud Build.
+gcloud builds submit --config cloudbuild.cloudrun.yaml \
+  --substitutions=_IMAGE="gcr.io/$(gcloud config get-value project)/gameragkit"
+
+# 2. Deploy that image to Cloud Run.
 gcloud run deploy gameragkit \
-  --source . \
-  --dockerfile Dockerfile.cloudrun \
+  --image "gcr.io/$(gcloud config get-value project)/gameragkit" \
   --region us-central1 \
   --allow-unauthenticated \
   --set-env-vars "DB=pgvector" \
@@ -95,13 +106,13 @@ gcloud run deploy gameragkit \
 ```
 
 If using the bundled OpenAI-compatible provider setup (the default for
-`deploy/cloudrun-config/`), use these env vars instead — model names are already set
-per-NPC in the yaml files, so you only need routing/auth/dimension vars here:
+`deploy/cloudrun-config/`), use these env vars on the deploy step instead — model names
+are already set per-NPC in the yaml files, so you only need routing/auth/dimension vars
+here:
 
 ```bash
 gcloud run deploy gameragkit \
-  --source . \
-  --dockerfile Dockerfile.cloudrun \
+  --image "gcr.io/$(gcloud config get-value project)/gameragkit" \
   --region us-central1 \
   --allow-unauthenticated \
   --set-env-vars "DB=pgvector" \
@@ -112,8 +123,7 @@ gcloud run deploy gameragkit \
   --set-env-vars "EMBED_DIMS=<your embedding model's dimension>"
 ```
 
-`gcloud` builds the image from `Dockerfile.cloudrun` and deploys it. On success it prints
-your service URL (`https://gameragkit-xxxxx-uc.a.run.app`).
+On success, the deploy step prints your service URL (`https://gameragkit-xxxxx-uc.a.run.app`).
 
 > An embedding model is required even for an NPC with no lore sources — every `/ask` call
 > embeds the player's question to search the vector store, regardless of whether anything
@@ -155,9 +165,15 @@ URL can call it and consume your LLM API quota. For anything beyond a quick test
 
 ## Updating your deployment
 
-```bash
-gcloud run deploy gameragkit --source . --dockerfile Dockerfile.cloudrun --region us-central1
-```
+Re-run both steps from [step 3](#3-deploy-to-cloud-run) — rebuild the image, then deploy
+it. This picks up your current `deploy/cloudrun-config/` (or `main` branch, if deploying
+from a fork) and replaces the running revision:
 
-Re-running the deploy command rebuilds from your current `deploy/cloudrun-config/` (or
-`main` branch, if deploying from a fork) and replaces the running revision.
+```bash
+gcloud builds submit --config cloudbuild.cloudrun.yaml \
+  --substitutions=_IMAGE="gcr.io/$(gcloud config get-value project)/gameragkit"
+
+gcloud run deploy gameragkit \
+  --image "gcr.io/$(gcloud config get-value project)/gameragkit" \
+  --region us-central1
+```

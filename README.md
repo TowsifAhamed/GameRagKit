@@ -13,14 +13,22 @@ GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for buildin
 
 > Dual-licensed: PolyForm Noncommercial 1.0.0 for community use with commercial terms available from the author.
 
-## Donate (optional)
+## Support this project
 
-If you’d like to support development, you can donate via RedotPay:
+GameRAGKit is free to use, but running it isn't free for me: the hosted demos, server
+infrastructure, and LLM API usage that power them come directly out of my own pocket.
+If GameRAGKit is useful to you — especially if you're using it in a shipped project —
+please consider chipping in. It directly determines how much time and infrastructure I
+can keep putting into this.
 
+- **[GitHub Sponsors](https://github.com/sponsors/TowsifAhamed)**
 - **RedotPay ID:** `1236302071`
-- **Donations are used to build AI-enhanced mods for existing games (bringing smarter NPC experiences) and to improve GameRAGKit.**
 
 ![RedotPay donation QR (1236302071)](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/cllect_qrcode.png)
+
+Donations go toward hosting costs, LLM API usage for the public demos, and continued
+development — including AI-enhanced mods for existing games and improvements to
+GameRAGKit itself.
 
 ## Community
 
