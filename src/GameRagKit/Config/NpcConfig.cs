@@ -173,6 +173,7 @@ public sealed record LocalProviderConfig
     public uint BatchSize { get; init; } = 512;
     public uint MicroBatchSize { get; init; } = 512;
     public int MaxTokens { get; init; } = 256;
+    public double Temperature { get; init; } = 0.3;
 }
 
 public sealed record CloudProviderConfig

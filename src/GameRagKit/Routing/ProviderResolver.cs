@@ -35,7 +35,7 @@ public sealed class ProviderResolver
             return Task.FromResult<IChatProvider?>(null);
         }
 
-        var client = CreateOllamaClient(endpoint, chatModel, embedModel);
+        var client = CreateOllamaClient(endpoint, chatModel, embedModel, config.Providers.Local.Temperature);
         return Task.FromResult<IChatProvider?>(client);
     }
 
@@ -67,7 +67,7 @@ public sealed class ProviderResolver
             return Task.FromResult<IEmbeddingProvider?>(null);
         }
 
-        var client = CreateOllamaClient(endpoint, chatModel, embedModel);
+        var client = CreateOllamaClient(endpoint, chatModel, embedModel, config.Providers.Local.Temperature);
         return Task.FromResult<IEmbeddingProvider?>(client);
     }
 
@@ -139,7 +139,7 @@ public sealed class ProviderResolver
         return httpClient;
     }
 
-    private static OllamaClient CreateOllamaClient(string endpoint, string chatModel, string embedModel)
+    private static OllamaClient CreateOllamaClient(string endpoint, string chatModel, string embedModel, double temperature)
     {
         var baseAddress = endpoint.EndsWith('/') ? endpoint : endpoint + "/";
         var httpClient = new HttpClient
@@ -147,7 +147,7 @@ public sealed class ProviderResolver
             BaseAddress = new Uri(baseAddress)
         };
 
-        return new OllamaClient(httpClient, chatModel, embedModel);
+        return new OllamaClient(httpClient, chatModel, embedModel, temperature);
     }
 
     public ISpeechToText? TryCreateSpeechToText(NpcConfig config, ProviderRuntimeOptions runtimeOptions)

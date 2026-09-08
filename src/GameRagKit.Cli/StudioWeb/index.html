@@ -3,55 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GameRagKit Studio</title>
+  <title>GameRagKit</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="home.css" />
 </head>
-<body>
+<body class="home-body">
   <header id="app-header">
-    <h1>GameRagKit Studio</h1>
+    <h1>GameRagKit</h1>
     <span id="npc-count"></span>
   </header>
 
-  <main>
-    <canvas id="npc-canvas"></canvas>
-    <div id="canvas-hint">Scroll to zoom &middot; Drag background to pan &middot; Drag a node to reposition &middot; Click a node to edit</div>
+  <main class="home-main">
+    <section class="hero">
+      <h2>Give every NPC a real mind, backed by your own lore.</h2>
+      <p>
+        GameRagKit is a retrieval-augmented persona engine for game NPCs: drop your world,
+        region, and faction lore into files, declare a persona in YAML, and get an NPC that
+        answers in character, remembers what it's told, and can share personality context
+        with hundreds of others through the same hierarchy, all through one small HTTP
+        API (<code>/ask</code>) any engine or client can call.
+      </p>
+      <div class="hero-actions">
+        <a class="hero-link" href="editor.html">Open the persona editor &rarr;</a>
+      </div>
+    </section>
+
+    <section class="demos">
+      <h3>See it running in a real scene</h3>
+      <p class="demos-sub">
+        Three playable Three.js first-person scenes, each backed by real GameRagKit NPCs,
+        not scripted dialogue. Walk up, press <kbd>E</kbd>, and every reply comes
+        from an actual <code>/ask</code> call.
+      </p>
+
+      <div class="demo-cards" id="demo-cards">
+        <a class="demo-card" href="demos/single-npc.html">
+          <div class="demo-card-thumb demo-card-thumb--single"></div>
+          <div class="demo-card-body">
+            <h4>Single NPC</h4>
+            <p>One guard in a small courtyard, the minimal proof that a real NPC
+              works inside a first-person game scene.</p>
+            <span class="demo-card-tag">1 NPC</span>
+          </div>
+        </a>
+
+        <a class="demo-card" href="demos/city.html">
+          <div class="demo-card-thumb demo-card-thumb--city"></div>
+          <div class="demo-card-body">
+            <h4>City</h4>
+            <p>Five NPCs with distinct personas around a town square, proving concurrent
+              NPCs don't cross-talk with each other.</p>
+            <span class="demo-card-tag">5 NPCs</span>
+          </div>
+        </a>
+
+        <a class="demo-card" href="demos/metropolis.html">
+          <div class="demo-card-thumb demo-card-thumb--metropolis"></div>
+          <div class="demo-card-body">
+            <h4>Metropolis</h4>
+            <p>Hundreds of clickable crowd figures, each sharing one of 14 archetype NPCs:
+              the cluster pattern that keeps backend load bounded at any crowd size.</p>
+            <span class="demo-card-tag">900 figures &middot; 14 shared NPCs</span>
+          </div>
+        </a>
+      </div>
+    </section>
   </main>
 
-  <aside id="side-panel" hidden>
-    <div class="panel-header">
-      <h2 id="panel-npc-name"></h2>
-      <button id="panel-close" aria-label="Close">&times;</button>
-    </div>
-
-    <section class="panel-section">
-      <h3>Persona</h3>
-      <label>
-        System prompt
-        <textarea id="field-system-prompt" rows="5"></textarea>
-      </label>
-      <label>
-        Style
-        <input id="field-style" type="text" />
-      </label>
-      <label class="checkbox-label">
-        <input id="field-mood-tracking" type="checkbox" />
-        Mood tracking
-      </label>
-      <div id="save-status" role="status"></div>
-      <button id="save-button">Save changes</button>
-    </section>
-
-    <section class="panel-section">
-      <h3>Chat tester</h3>
-      <div id="chat-log"></div>
-      <form id="chat-form">
-        <input id="chat-input" type="text" placeholder="Ask the NPC something..." autocomplete="off" />
-        <button type="submit">Send</button>
-      </form>
-    </section>
-  </aside>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="app.js"></script>
+  <script src="home.js"></script>
 </body>
 </html>

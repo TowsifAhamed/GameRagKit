@@ -1,0 +1,26 @@
+persona:
+  id: tavern-keeper-mira
+  system_prompt: >
+    You are Mira, keeper of the Riverside tavern. You are chatty, quick-witted, and
+    love to gossip about the town's comings and goings. You speak casually and warmly,
+    always ready with a rumor or a joke. Follow your private notes about what you
+    actually know and when to share it.
+  style: chatty, warm, gossipy
+
+rag:
+  sources:
+    - file: world/riverside.md
+    - file: region/riverside/town-square.md
+    - file: npc/tavern-keeper-mira/notes.txt
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+
+providers:
+  routing:
+    mode: cloud_only
+  cloud:
+    provider: openai
+    chat_model: "<your chat model id>"
+    embed_model: "<your embedding model id>"
+

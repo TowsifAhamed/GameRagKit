@@ -15,12 +15,14 @@ public sealed class OllamaClient : IChatProvider, IEmbeddingProvider
     private readonly HttpClient _httpClient;
     private readonly string _chatModel;
     private readonly string _embedModel;
+    private readonly double _temperature;
 
-    public OllamaClient(HttpClient httpClient, string chatModel, string embedModel)
+    public OllamaClient(HttpClient httpClient, string chatModel, string embedModel, double temperature = 0.3)
     {
         _httpClient = httpClient;
         _chatModel = chatModel;
         _embedModel = embedModel;
+        _temperature = temperature;
     }
 
     public async IAsyncEnumerable<string> StreamAsync(string system, string context, string user, [EnumeratorCancellation] CancellationToken ct)
@@ -33,7 +35,8 @@ public sealed class OllamaClient : IChatProvider, IEmbeddingProvider
                 new { role = "system", content = system },
                 new { role = "user", content = $"CONTEXT:\n{context}\n\nPLAYER: {user}" }
             },
-            stream = true
+            stream = true,
+            options = new { temperature = _temperature }
         };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
@@ -84,7 +87,8 @@ public sealed class OllamaClient : IChatProvider, IEmbeddingProvider
                     new { role = "system", content = system },
                     new { role = "user", content = $"CONTEXT:\n{context}\n\nPLAYER: {user}" }
                 },
-                stream = false
+                stream = false,
+                options = new { temperature = _temperature }
             };
 
             using var response = await _httpClient.PostAsJsonAsync("/api/chat", payload, SerializerOptions, ct).ConfigureAwait(false);

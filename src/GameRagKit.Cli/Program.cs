@@ -193,14 +193,31 @@ studioCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
 
     var registryEntries = new List<KeyValuePair<string, NpcAgent>>();
     var catalogEntries = new List<StudioNpcEntry>();
-    foreach (var file in configDir.EnumerateFiles("*.yaml", SearchOption.AllDirectories))
+
+    async Task LoadNpcsFromAsync(DirectoryInfo directory)
     {
-        var agent = await GameRAGKit.Load(file.FullName);
-        agent.UseEnv();
-        await agent.EnsureIndexAsync();
-        registryEntries.Add(new KeyValuePair<string, NpcAgent>(agent.PersonaId, agent));
-        registryEntries.Add(new KeyValuePair<string, NpcAgent>(Path.GetFileNameWithoutExtension(file.Name), agent));
-        catalogEntries.Add(new StudioNpcEntry(agent.PersonaId, file.FullName));
+        foreach (var file in directory.EnumerateFiles("*.yaml", SearchOption.AllDirectories))
+        {
+            var agent = await GameRAGKit.Load(file.FullName);
+            agent.UseEnv();
+            await agent.EnsureIndexAsync();
+            registryEntries.Add(new KeyValuePair<string, NpcAgent>(agent.PersonaId, agent));
+            registryEntries.Add(new KeyValuePair<string, NpcAgent>(Path.GetFileNameWithoutExtension(file.Name), agent));
+            catalogEntries.Add(new StudioNpcEntry(agent.PersonaId, file.FullName));
+        }
+    }
+
+    await LoadNpcsFromAsync(configDir);
+
+    // The landing page's 3 WebGL demo scenes (StudioWeb/demos/*.html) call /ask against
+    // this same server, so their NPCs (StudioWeb/demo-npcs/*.yaml -- single-npc/city's
+    // named actors plus metropolis's 14 shared archetypes) are always loaded alongside
+    // whatever project --config points at. Indexing ~20 small personas at startup is a
+    // few seconds, not a real cost, so this stays simple rather than lazy-loading per demo.
+    var demoNpcsDir = new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "StudioWeb", "demo-npcs"));
+    if (demoNpcsDir.Exists)
+    {
+        await LoadNpcsFromAsync(demoNpcsDir);
     }
 
     var registry = new AgentRegistry(registryEntries);
@@ -226,7 +243,19 @@ studioCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
     {
         var fileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRoot);
         app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
-        app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
+
+        // The demo scenes' glTF/GLB model assets (StudioWeb/demos/assets/**/*.glb) 404'd
+        // under plain UseStaticFiles(): ASP.NET Core's default FileExtensionContentTypeProvider
+        // only serves extensions it recognizes (ServeUnknownFileTypes defaults to false), and
+        // .glb/.gltf/.bin aren't in its built-in map. Registering them here is required for
+        // the demo pages' THREE.GLTFLoader fetches to succeed at all -- verified by curl
+        // returning 404 for a .glb even when the exact same bytes under a .css/.js name in
+        // the same directory served fine.
+        var contentTypeProvider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+        contentTypeProvider.Mappings[".glb"] = "model/gltf-binary";
+        contentTypeProvider.Mappings[".gltf"] = "model/gltf+json";
+        contentTypeProvider.Mappings[".bin"] = "application/octet-stream";
+        app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider, ContentTypeProvider = contentTypeProvider });
     }
     else
     {

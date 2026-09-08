@@ -5,8 +5,8 @@ by Neon's free Postgres (pgvector) tier. Both are durable free tiers (no 30-day 
 no credit-card-triggered surprise charges within the free quota) — not trials.
 
 **Cost to you: $0** within each platform's free limits. You bring your own LLM API key
-(OpenAI, Gemini, etc.) and pay that provider directly for whatever you use — GameRagKit
-itself never sees or bills for your key.
+and pay that provider directly for whatever you use — GameRagKit itself never sees or
+bills for your key.
 
 This is a "deploy your own instance" template, not a shared public GameRagKit server.
 Each deployer gets their own isolated instance, their own database, their own API costs.
@@ -19,7 +19,33 @@ Each deployer gets their own isolated instance, their own database, their own AP
   credit card, never expires).
 - An API key from a supported cloud LLM provider (OpenAI, Azure, Gemini, Groq,
   OpenRouter, or Mistral — see [Provider Compatibility](2025-11-29/PROVIDER_COMPATIBILITY.md)).
+  Any provider that exposes an OpenAI-shaped `v1/chat/completions` / `v1/embeddings` API
+  also works through the OpenAI-compatible provider (`provider: openai`) — see the note
+  below for the exact settings, including what the bundled `deploy/cloudrun-config/` NPCs
+  are set up for by default.
 - `gcloud` CLI installed and authenticated (`gcloud auth login`).
+
+### Using an OpenAI-compatible LLM provider
+
+The bundled NPC configs in `deploy/cloudrun-config/` are already set to:
+
+```yaml
+providers:
+  routing:
+    mode: cloud_only
+  cloud:
+    provider: openai
+    chat_model: "<your chat model id>"
+    embed_model: "<your embedding model id>"
+```
+
+To point this at your provider, set these env vars at deploy time (see step 3):
+`PROVIDER=openai`, `API_KEY=<your provider API key>`,
+`CLOUD_ENDPOINT=<your provider's OpenAI-compatible base URL>`, and `EMBED_DIMS=<your
+embedding model's dimension>` (this must match the embedding model's actual output size,
+or every query will fail with a dimension-mismatch error). Consult your provider's docs
+for its base URL, model catalog, and how to scope an API key/token to just what this
+deployment needs.
 
 ## 1. Set up Neon (vector storage)
 
@@ -66,6 +92,24 @@ gcloud run deploy gameragkit \
   --set-env-vars "API_KEY=sk-..." \
   --set-env-vars "CLOUD_CHAT_MODEL=gpt-4o-mini" \
   --set-env-vars "CLOUD_EMBED_MODEL=text-embedding-3-small"
+```
+
+If using the bundled OpenAI-compatible provider setup (the default for
+`deploy/cloudrun-config/`), use these env vars instead — model names are already set
+per-NPC in the yaml files, so you only need routing/auth/dimension vars here:
+
+```bash
+gcloud run deploy gameragkit \
+  --source . \
+  --dockerfile Dockerfile.cloudrun \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars "DB=pgvector" \
+  --set-env-vars "CONNECTION_STRING=Host=...;Port=5432;Username=...;Password=...;Database=...;SSL Mode=Require;Trust Server Certificate=true" \
+  --set-env-vars "PROVIDER=openai" \
+  --set-env-vars "API_KEY=<your provider API key>" \
+  --set-env-vars "CLOUD_ENDPOINT=<your provider's OpenAI-compatible base URL>" \
+  --set-env-vars "EMBED_DIMS=<your embedding model's dimension>"
 ```
 
 `gcloud` builds the image from `Dockerfile.cloudrun` and deploys it. On success it prints

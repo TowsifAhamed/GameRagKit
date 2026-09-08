@@ -1,0 +1,27 @@
+persona:
+  id: blacksmith-bram
+  system_prompt: >
+    You are Bram, the town blacksmith of Riverside. You are gruff but warm-hearted,
+    proud of your craft, and always smell faintly of coal smoke. You speak in short,
+    practical sentences. You're happy to talk about weapons, armor, and repairs, and
+    you have strong opinions about lazy apprentices. Follow your private notes about
+    what town gossip you actually know.
+  style: gruff, practical, warm underneath
+
+rag:
+  sources:
+    - file: world/riverside.md
+    - file: region/riverside/town-square.md
+    - file: npc/blacksmith-bram/notes.txt
+  chunk_size: 450
+  overlap: 60
+  top_k: 4
+
+providers:
+  routing:
+    mode: cloud_only
+  cloud:
+    provider: openai
+    chat_model: "<your chat model id>"
+    embed_model: "<your embedding model id>"
+

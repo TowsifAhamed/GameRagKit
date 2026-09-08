@@ -1,0 +1,171 @@
+/* Landing page only -- styles.css still owns the shared header/tokens and the editor view. */
+
+html, body.home-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.home-main {
+  position: static;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 96px 24px 64px;
+}
+
+.hero h2 {
+  font-size: 32px;
+  line-height: 1.25;
+  margin: 0 0 16px;
+  max-width: 720px;
+}
+
+.hero p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 640px;
+  margin: 0 0 24px;
+}
+
+.hero p code {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+.hero-actions {
+  margin-bottom: 64px;
+}
+
+.hero-link {
+  display: inline-block;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.hero-link:hover {
+  border-bottom-color: var(--accent);
+}
+
+.demos h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+}
+
+.demos-sub {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 640px;
+  margin: 0 0 28px;
+}
+
+.demos-sub kbd {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+}
+
+.demos-sub code {
+  color: var(--text);
+}
+
+.demo-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 860px) {
+  .demo-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.demo-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.demo-card:hover {
+  border-color: var(--accent-dim);
+  transform: translateY(-2px);
+}
+
+.demo-card-thumb {
+  height: 140px;
+  background: radial-gradient(circle at 30% 20%, #232838, #14161d 70%);
+  position: relative;
+}
+
+.demo-card-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.demo-card-thumb--single {
+  background: radial-gradient(circle at 50% 55%, #2c3550, #14161d 70%);
+}
+
+.demo-card-thumb--city {
+  background: radial-gradient(circle at 40% 30%, #2a3a4a, #14161d 70%);
+}
+
+.demo-card-thumb--metropolis {
+  background: radial-gradient(circle at 60% 40%, #3a2a4a, #14161d 70%);
+}
+
+.demo-card-body {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.demo-card-body h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.demo-card-body p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  flex: 1;
+}
+
+.demo-card-tag {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  background: rgba(110, 168, 254, 0.12);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
