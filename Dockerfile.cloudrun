@@ -20,8 +20,20 @@ WORKDIR /app
 COPY --from=build /app/publish ./
 COPY deploy/cloudrun-config ./config
 
+# `studio` (used below) always auto-loads StudioWeb/demo-npcs/ alongside --config, to back
+# the 3 bundled WebGL demo scenes (StudioWeb/demos/*.html). Those NPCs default to
+# local_only/Ollama routing, which doesn't exist in this container, so overwrite them here
+# with the same cloud_only configs used for ./config -- keeps the demo scenes working on a
+# deploy like this one instead of crashing at startup on a refused Ollama connection.
+COPY deploy/cloudrun-config ./StudioWeb/demo-npcs
+
 # Cloud Run sets $PORT at runtime and expects the container to listen on it. Shell form
 # is needed for $PORT to actually expand, but `exec` replaces the shell with the dotnet
 # process so it still receives SIGTERM directly for Cloud Run's graceful shutdown.
+#
+# Uses `studio`, not `serve` -- `serve` only exposes the bare /ask JSON API with no web
+# root at all, so visiting the deployed URL in a browser 404s on every path. `studio`
+# serves the same API plus StudioWeb/ (the web UI and the three WebGL demo scenes),
+# which is what a browser visiting the root URL actually expects to see.
 ENV PORT=8080
-CMD exec dotnet GameRagKit.Cli.dll serve --config /app/config --port $PORT
+CMD exec dotnet GameRagKit.Cli.dll studio --config /app/config --port $PORT
