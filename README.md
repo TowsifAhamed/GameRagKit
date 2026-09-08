@@ -21,7 +21,6 @@ If GameRAGKit is useful to you — especially if you're using it in a shipped pr
 please consider chipping in. It directly determines how much time and infrastructure I
 can keep putting into this.
 
-- **[GitHub Sponsors](https://github.com/sponsors/TowsifAhamed)**
 - **RedotPay ID:** `1236302071`
 
 ![RedotPay donation QR (1236302071)](https://raw.githubusercontent.com/TowsifAhamed/GameRagKit/main/cllect_qrcode.png)
