@@ -113,7 +113,19 @@ html, body.home-body {
 .demo-card-thumb {
   height: 140px;
   background: radial-gradient(circle at 30% 20%, #232838, #14161d 70%);
+  background-size: cover;
+  background-position: center;
   position: relative;
+}
+
+/* Screenshot thumbnails are set inline via style="background-image: url(...)" per card;
+   this dark scrim keeps the card title/tag legible over any photo and keeps the three
+   cards visually consistent with each other regardless of the screenshot's own palette. */
+.demo-card-thumb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15,17,21,0.15), rgba(15,17,21,0.55));
 }
 
 .demo-card-thumb::after {
@@ -127,15 +139,15 @@ html, body.home-body {
 }
 
 .demo-card-thumb--single {
-  background: radial-gradient(circle at 50% 55%, #2c3550, #14161d 70%);
+  background-color: #2c3550;
 }
 
 .demo-card-thumb--city {
-  background: radial-gradient(circle at 40% 30%, #2a3a4a, #14161d 70%);
+  background-color: #2a3a4a;
 }
 
 .demo-card-thumb--metropolis {
-  background: radial-gradient(circle at 60% 40%, #3a2a4a, #14161d 70%);
+  background-color: #3a2a4a;
 }
 
 .demo-card-body {

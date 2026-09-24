@@ -12,7 +12,8 @@
 
   <div id="hud">
     <div class="title">Metropolis — <span id="crowd-count"></span> talkable figures, <span id="roster-count"></span> shared backend NPCs</div>
-    Click to look around &middot; WASD to move &middot; E to talk to a highlighted figure &middot; Esc to leave dialogue
+    <span class="hint-text">Click to look around &middot; WASD to move &middot; E to talk to a highlighted figure &middot; Esc to leave dialogue</span>
+    <span class="hint-text-touch">Drag right side to look &middot; joystick to move &middot; tap prompt to talk</span>
   </div>
 
   <div id="support-banner">
@@ -29,7 +30,10 @@
   <div id="interact-prompt" hidden></div>
 
   <div id="dialogue-panel" hidden>
-    <div id="dialogue-npc-name"></div>
+    <div id="dialogue-panel-header">
+      <div id="dialogue-npc-name"></div>
+      <button id="dialogue-close" type="button" aria-label="Close conversation">&times;</button>
+    </div>
     <div id="dialogue-log"></div>
     <form id="dialogue-form">
       <input id="dialogue-input" type="text" placeholder="Say something..." autocomplete="off" />
@@ -53,6 +57,7 @@
        (already loaded above) rather than bundling its own copy. -->
   <script src="https://cdn.jsdelivr.net/npm/three-pathfinding@1.3.0/dist/three-pathfinding.umd.js"></script>
   <script src="shared/game-engine.js"></script>
+  <script src="shared/touch-controls.js"></script>
   <script src="shared/dialogue-controller.js"></script>
   <script src="shared/metropolis-roster.js"></script>
   <script>
@@ -275,6 +280,7 @@
     document.getElementById("crowd-count").textContent = CROWD_COUNT;
     document.getElementById("roster-count").textContent = roster.length;
 
+    GameRagDemo.attachTouchControls(game);
     GameRagDemo.attachDialogueController(game);
   </script>
 </body>

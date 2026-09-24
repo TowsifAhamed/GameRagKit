@@ -134,7 +134,11 @@
 
     let pointerLocked = false;
     canvas.addEventListener("click", () => {
-      if (!pointerLocked) {
+      // touch-controls.js marks touch devices with this class before this script runs
+      // (see its module-scope check); pointer lock has no meaningful behavior there (no
+      // movementX/Y from a touchmove) and some mobile browsers reject or ignore the
+      // request anyway, so skip asking for it at all rather than relying on that.
+      if (!pointerLocked && !document.body.classList.contains("touch-mode")) {
         canvas.requestPointerLock();
       }
     });
@@ -1561,7 +1565,21 @@
       // turns of the SAME conversation; dropping it here would silently defeat that fix
       // even though askNpc itself still accepts the parameter.
       ask: (npcId, question, transcript) => askNpc(serverUrl, npcId, question, transcript),
-      exitPointerLock: () => document.exitPointerLock()
+      exitPointerLock: () => document.exitPointerLock(),
+      // Touch-control hooks (see touch-controls.js): a virtual joystick sets/clears the
+      // same WASD codes the keyboard path already reads in tick() above, so movement logic
+      // stays in exactly one place. Look is applied directly here rather than going through
+      // a synthetic mousemove, since there is no pointer-lock movementX/Y on touch.
+      setMoveKey: (code, isDown) => {
+        if (isDown) keysDown.add(code);
+        else keysDown.delete(code);
+      },
+      applyLookDelta: (dx, dy, sensitivity) => {
+        const s = sensitivity !== undefined ? sensitivity : 0.0055;
+        player.yaw -= dx * s;
+        player.pitch -= dy * s;
+        player.pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.pitch));
+      }
     };
   }
 

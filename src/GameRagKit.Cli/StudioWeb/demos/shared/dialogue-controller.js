@@ -10,19 +10,29 @@
     const dialogueLog = document.getElementById("dialogue-log");
     const dialogueForm = document.getElementById("dialogue-form");
     const dialogueInput = document.getElementById("dialogue-input");
+    const dialogueClose = document.getElementById("dialogue-close");
 
     let activeNpc = null;
     let dialogueOpen = false;
     let transcript = [];
 
+    // Touch devices have no "E" key, so the same prompt element doubles as a tappable
+    // button there (see touch-controls.js, which adds the touch-mode class to <body>) --
+    // one prompt element serves both input modes rather than maintaining two.
+    const isTouch = document.body.classList.contains("touch-mode");
+
     function showInteractPrompt(npc) {
       interactPrompt.hidden = !npc || dialogueOpen;
       if (npc) {
         interactPrompt.textContent = "";
-        const kbd = document.createElement("kbd");
-        kbd.textContent = "E";
-        interactPrompt.appendChild(kbd);
-        interactPrompt.appendChild(document.createTextNode(` Talk to ${npc.label}`));
+        if (isTouch) {
+          interactPrompt.appendChild(document.createTextNode(`Talk to ${npc.label}`));
+        } else {
+          const kbd = document.createElement("kbd");
+          kbd.textContent = "E";
+          interactPrompt.appendChild(kbd);
+          interactPrompt.appendChild(document.createTextNode(` Talk to ${npc.label}`));
+        }
       }
     }
 
@@ -43,7 +53,17 @@
       dialogueLog.innerHTML = "";
       addLine("npc", npc.greeting);
       document.exitPointerLock();
-      dialogueInput.focus();
+      // Marks the dialogue as open for touch-controls.js, which hides the joystick/look
+      // zones while this class is set -- otherwise their full-screen touch targets sit
+      // over the dialogue panel and swallow taps meant for the input/log/close button.
+      document.body.classList.add("dialogue-open");
+      if (isTouch) {
+        // Autofocusing the text input pops the on-screen keyboard immediately on touch,
+        // covering half the dialogue panel before the player has read the greeting.
+        dialogueInput.blur();
+      } else {
+        dialogueInput.focus();
+      }
     }
 
     function closeDialogue() {
@@ -52,6 +72,7 @@
       dialoguePanel.hidden = true;
       activeNpc = null;
       transcript = [];
+      document.body.classList.remove("dialogue-open");
       showInteractPrompt(game.getClosestNpc());
     }
 
@@ -79,6 +100,19 @@
         }
       }
     });
+
+    if (isTouch) {
+      interactPrompt.addEventListener("click", () => {
+        const npc = game.getClosestNpc();
+        if (npc) {
+          openDialogue(npc);
+        }
+      });
+    }
+
+    if (dialogueClose) {
+      dialogueClose.addEventListener("click", () => closeDialogue());
+    }
 
     dialogueForm.addEventListener("submit", async (event) => {
       event.preventDefault();

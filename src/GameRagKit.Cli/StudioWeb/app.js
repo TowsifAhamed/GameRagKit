@@ -207,6 +207,24 @@
       const y = Math.sin(angle) * radius;
       createNode(id, x, y);
     });
+    fitCameraToRadius(radius);
+  }
+
+  // Without this, the camera's initial zoom (1) frames only a ~viewWidth x viewHeight
+  // pixel window around the origin -- fine for a handful of nodes, but with enough NPCs
+  // the ring layout's radius (see layoutNodes above) grows past that window and almost
+  // every node lands outside the visible viewport, so the canvas looks completely blank
+  // on load with no indication anything is there (confirmed against the live deployment
+  // with 40 NPCs: radius 1600 vs. a ~836x475 default half-extent). Padding so the ring
+  // isn't flush against the edges, and clamping to the same [0.25, 4] range the wheel
+  // handler already enforces so this can't leave zoom in a state manual scrolling can't
+  // recover from.
+  function fitCameraToRadius(radius) {
+    const padding = 1.25;
+    const fitZoomX = viewWidth / 2 / (radius * padding);
+    const fitZoomY = viewHeight / 2 / (radius * padding);
+    zoom = Math.min(4, Math.max(0.25, Math.min(fitZoomX, fitZoomY)));
+    updateCamera();
   }
 
   // ---- Pointer interaction: pan background, drag nodes, click to open ---

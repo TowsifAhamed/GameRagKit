@@ -42,6 +42,10 @@ html, body {
   margin-bottom: 4px;
 }
 
+#hud .hint-text-touch {
+  display: none;
+}
+
 #hud .quest-hint {
   margin-top: 8px;
   padding: 6px 10px;
@@ -145,13 +149,33 @@ html, body {
 
 #dialogue-panel[hidden] { display: none; }
 
+#dialogue-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 #dialogue-npc-name {
   font-size: 13px;
   font-weight: 700;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
+}
+
+#dialogue-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0 0 12px;
+}
+
+#dialogue-close:hover {
+  color: var(--text);
 }
 
 #dialogue-log {
