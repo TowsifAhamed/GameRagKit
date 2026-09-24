@@ -214,7 +214,6 @@
       createNode(id, x, y);
     });
     fitCameraToRadius(radius);
-    window.__debugFit = { radius, viewWidth, viewHeight, zoom };
   }
 
   // Without this, the camera's initial zoom (1) frames only a ~viewWidth x viewHeight
