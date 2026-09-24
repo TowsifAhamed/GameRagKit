@@ -20,6 +20,12 @@
   const NODE_COLOR = 0x6ea8fe;
   const NODE_COLOR_HOVER = 0x85b6ff;
   const NODE_COLOR_ACTIVE = 0x5ec26a;
+  // Shared by the wheel handler and fitCameraToRadius (see below) so manual scrolling can
+  // always reach at least as far out as the initial auto-fit needs -- if the two ever
+  // disagreed, whichever had the tighter floor could clamp the ring back into a
+  // partially-off-screen state the other was specifically written to avoid.
+  const MIN_ZOOM = 0.02;
+  const MAX_ZOOM = 4;
 
   // ---- API -------------------------------------------------------------
 
@@ -216,14 +222,19 @@
   // every node lands outside the visible viewport, so the canvas looks completely blank
   // on load with no indication anything is there (confirmed against the live deployment
   // with 40 NPCs: radius 1600 vs. a ~836x475 default half-extent). Padding so the ring
-  // isn't flush against the edges, and clamping to the same [0.25, 4] range the wheel
-  // handler already enforces so this can't leave zoom in a state manual scrolling can't
-  // recover from.
+  // isn't flush against the edges.
+  //
+  // MIN_ZOOM here must be low enough to actually fit the largest radius this ring layout
+  // can produce, not an arbitrary "close enough" floor -- the previous 0.25 floor was
+  // tuned against a ~20-NPC local test and silently failed at the live deployment's
+  // actual 40 NPCs (radius 1600 needs zoom ~0.22, which 0.25 clamped back up to,
+  // reintroducing the exact blank-canvas bug this function exists to fix). 0.02 comfortably
+  // fits several hundred NPCs (radius ~16000) before the same problem could recur.
   function fitCameraToRadius(radius) {
     const padding = 1.25;
     const fitZoomX = viewWidth / 2 / (radius * padding);
     const fitZoomY = viewHeight / 2 / (radius * padding);
-    zoom = Math.min(4, Math.max(0.25, Math.min(fitZoomX, fitZoomY)));
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(fitZoomX, fitZoomY)));
     updateCamera();
   }
 
@@ -328,7 +339,7 @@
   canvas.addEventListener("wheel", (event) => {
     event.preventDefault();
     const zoomFactor = Math.exp(-event.deltaY * 0.001);
-    zoom = Math.min(4, Math.max(0.25, zoom * zoomFactor));
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * zoomFactor));
     updateCamera();
   }, { passive: false });
 
