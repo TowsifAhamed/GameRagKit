@@ -14,8 +14,9 @@
   </header>
 
   <main>
-    <canvas id="npc-canvas"></canvas>
-    <div id="canvas-hint">Scroll to zoom &middot; Drag background to pan &middot; Drag a node to reposition &middot; Click a node to edit</div>
+    <div id="npc-grid-scroll">
+      <div id="npc-grid" aria-label="NPC personas"></div>
+    </div>
   </main>
 
   <aside id="side-panel" hidden>
@@ -52,7 +53,6 @@
     </section>
   </aside>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

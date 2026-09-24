@@ -255,7 +255,28 @@ studioCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
         contentTypeProvider.Mappings[".glb"] = "model/gltf-binary";
         contentTypeProvider.Mappings[".gltf"] = "model/gltf+json";
         contentTypeProvider.Mappings[".bin"] = "application/octet-stream";
-        app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider, ContentTypeProvider = contentTypeProvider });
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = fileProvider,
+            ContentTypeProvider = contentTypeProvider,
+            // ASP.NET Core's static file middleware sends no Cache-Control header at all by
+            // default, which leaves every browser free to fall back to heuristic caching --
+            // Chrome in particular has been observed keeping an old app.js/styles.css/*.html
+            // for hours after a redeploy with no revalidation request at all, so editing these
+            // files and shipping a new version was silently invisible to anyone with a warm
+            // cache (confirmed directly: a fetch with cache:'no-store' returned the new file's
+            // bytes while the exact same URL's already-loaded <link>/<script> in the same page
+            // was still running months-old content, with no Cache-Control/ETag mismatch to
+            // explain it -- the response simply carried no caching directive of its own).
+            // must-revalidate (not no-store) keeps normal 304 conditional-GET reuse working via
+            // the ETag ASP.NET Core already sends, so this doesn't turn every page load into a
+            // full re-download -- it only forces a freshness check instead of trusting a stale
+            // copy indefinitely.
+            OnPrepareResponse = ctx =>
+            {
+                ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+            }
+        });
     }
     else
     {

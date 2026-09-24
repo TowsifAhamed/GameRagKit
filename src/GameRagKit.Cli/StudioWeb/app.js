@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const canvas = document.getElementById("npc-canvas");
+  const npcGrid = document.getElementById("npc-grid");
   const npcCountEl = document.getElementById("npc-count");
   const sidePanel = document.getElementById("side-panel");
   const panelNpcName = document.getElementById("panel-npc-name");
@@ -16,16 +16,6 @@
   const chatInput = document.getElementById("chat-input");
 
   const PROTOCOL_HEADER = { "X-GameRAG-Protocol": "1" };
-  const NODE_RADIUS = 34;
-  const NODE_COLOR = 0x6ea8fe;
-  const NODE_COLOR_HOVER = 0x85b6ff;
-  const NODE_COLOR_ACTIVE = 0x5ec26a;
-  // Shared by the wheel handler and fitCameraToRadius (see below) so manual scrolling can
-  // always reach at least as far out as the initial auto-fit needs -- if the two ever
-  // disagreed, whichever had the tighter floor could clamp the ring back into a
-  // partially-off-screen state the other was specifically written to avoid.
-  const MIN_ZOOM = 0.02;
-  const MAX_ZOOM = 4;
 
   // ---- API -------------------------------------------------------------
 
@@ -121,251 +111,116 @@
     return value;
   }
 
-  // ---- WebGL canvas (Three.js): pan / zoom / drag NPC nodes -------------
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0f1115);
-
-  const camera = new THREE.OrthographicCamera(0, 0, 0, 0, -1000, 1000);
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-
-  let viewWidth = 0;
-  let viewHeight = 0;
-  let panX = 0;
-  let panY = 0;
-  let zoom = 1;
-
-  function resize() {
-    viewWidth = canvas.clientWidth;
-    viewHeight = canvas.clientHeight;
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
-    renderer.setSize(viewWidth, viewHeight, false);
-    updateCamera();
-  }
-
-  function updateCamera() {
-    const halfW = viewWidth / 2 / zoom;
-    const halfH = viewHeight / 2 / zoom;
-    camera.left = panX - halfW;
-    camera.right = panX + halfW;
-    camera.top = panY + halfH;
-    camera.bottom = panY - halfH;
-    camera.updateProjectionMatrix();
-  }
-
-  window.addEventListener("resize", resize);
-
-  // NPC node = a circle mesh + a label sprite, grouped so both move together.
-  const nodesByPersonaId = new Map();
-
-  function makeLabelTexture(text) {
-    const canvasEl = document.createElement("canvas");
-    const ctx = canvasEl.getContext("2d");
-    const fontSize = 28;
-    ctx.font = `600 ${fontSize}px -apple-system, sans-serif`;
-    const textWidth = ctx.measureText(text).width;
-    canvasEl.width = Math.ceil(textWidth) + 24;
-    canvasEl.height = fontSize + 16;
-
-    ctx.font = `600 ${fontSize}px -apple-system, sans-serif`;
-    ctx.fillStyle = "#e6e8ec";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 12, canvasEl.height / 2);
-
-    const texture = new THREE.CanvasTexture(canvasEl);
-    texture.needsUpdate = true;
-    return { texture, width: canvasEl.width, height: canvasEl.height };
-  }
-
-  function createNode(personaId, x, y) {
-    const group = new THREE.Group();
-    group.position.set(x, y, 0);
-
-    const circleGeometry = new THREE.CircleGeometry(NODE_RADIUS, 48);
-    const circleMaterial = new THREE.MeshBasicMaterial({ color: NODE_COLOR });
-    const circle = new THREE.Mesh(circleGeometry, circleMaterial);
-    circle.userData.personaId = personaId;
-    group.add(circle);
-
-    const ringGeometry = new THREE.RingGeometry(NODE_RADIUS, NODE_RADIUS + 3, 48);
-    const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x0f1115 });
-    group.add(new THREE.Mesh(ringGeometry, ringMaterial));
-
-    const label = makeLabelTexture(personaId);
-    const spriteMaterial = new THREE.SpriteMaterial({ map: label.texture, depthTest: false });
-    const sprite = new THREE.Sprite(spriteMaterial);
-    const scale = 0.6;
-    sprite.scale.set(label.width * scale, label.height * scale, 1);
-    sprite.position.set(0, -(NODE_RADIUS + 22), 1);
-    group.add(sprite);
-
-    scene.add(group);
-    nodesByPersonaId.set(personaId, { group, circle, circleMaterial });
-    return group;
-  }
-
-  function layoutNodes(personaIds) {
-    const radius = Math.max(180, personaIds.length * 40);
-    const angleStep = (2 * Math.PI) / Math.max(personaIds.length, 1);
-    personaIds.forEach((id, index) => {
-      const angle = index * angleStep;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      createNode(id, x, y);
-    });
-    fitCameraToRadius(radius);
-  }
-
-  // Without this, the camera's initial zoom (1) frames only a ~viewWidth x viewHeight
-  // pixel window around the origin -- fine for a handful of nodes, but with enough NPCs
-  // the ring layout's radius (see layoutNodes above) grows past that window and almost
-  // every node lands outside the visible viewport, so the canvas looks completely blank
-  // on load with no indication anything is there (confirmed against the live deployment
-  // with 40 NPCs: radius 1600 vs. a ~836x475 default half-extent). Padding so the ring
-  // isn't flush against the edges.
+  // ---- NPC grid: one card per persona, with a portrait image or a ------
+  // generated initial-avatar fallback --------------------------------------
   //
-  // MIN_ZOOM here must be low enough to actually fit the largest radius this ring layout
-  // can produce, not an arbitrary "close enough" floor -- the previous 0.25 floor was
-  // tuned against a ~20-NPC local test and silently failed at the live deployment's
-  // actual 40 NPCs (radius 1600 needs zoom ~0.22, which 0.25 clamped back up to,
-  // reintroducing the exact blank-canvas bug this function exists to fix). 0.02 comfortably
-  // fits several hundred NPCs (radius ~16000) before the same problem could recur.
-  function fitCameraToRadius(radius) {
-    const padding = 1.25;
-    const fitZoomX = viewWidth / 2 / (radius * padding);
-    const fitZoomY = viewHeight / 2 / (radius * padding);
-    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(fitZoomX, fitZoomY)));
-    updateCamera();
+  // Only a handful of the bundled demo personas (guard-north-gate,
+  // tavern-keeper-mira) have a real cropped screenshot portrait under
+  // images/npc-*.jpg -- the rest (courier/vendor/office-worker archetypes
+  // used by the Metropolis crowd demo, plus any user-authored persona) have
+  // no matching artwork at all, so they always fall back to a deterministic
+  // colored initial avatar rather than guessing a wrong character image for
+  // them.
+  const PORTRAIT_BY_PERSONA_ID = {
+    "guard-north-gate": "images/npc-guard.jpg",
+    "tavern-keeper-mira": "images/npc-tavern-keeper.jpg"
+  };
+
+  // Same idea as GitHub/Slack's default avatars: a stable color derived from
+  // the persona id (so the same NPC always gets the same color across a
+  // reload) plus its initials, so cards without a real portrait are still
+  // visually distinct from each other at a glance instead of all looking
+  // identical.
+  const AVATAR_COLORS = ["#6ea8fe", "#5ec26a", "#e5735a", "#d4c23a", "#8a8ad4", "#d45a5a", "#5ac27a", "#d48a3a"];
+
+  function hashString(value) {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = (hash * 31 + value.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
   }
 
-  // ---- Pointer interaction: pan background, drag nodes, click to open ---
-
-  const raycaster = new THREE.Raycaster();
-  const pointerNdc = new THREE.Vector2();
-  let activePersonaId = null;
-  let draggingNode = null;
-  let panning = false;
-  let lastPointer = { x: 0, y: 0 };
-  let pointerDownAt = { x: 0, y: 0 };
-  let hoveredCircle = null;
-
-  function screenToWorld(clientX, clientY) {
-    const rect = canvas.getBoundingClientRect();
-    const halfW = viewWidth / 2 / zoom;
-    const halfH = viewHeight / 2 / zoom;
-    const nx = (clientX - rect.left) / rect.width;
-    const ny = (clientY - rect.top) / rect.height;
-    return {
-      x: panX - halfW + nx * (2 * halfW),
-      y: panY + halfH - ny * (2 * halfH)
-    };
+  function initialsFor(personaId) {
+    const words = personaId.split(/[-_\s]+/).filter(Boolean);
+    if (words.length === 0) return "?";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
   }
 
-  function pickCircleAt(clientX, clientY) {
-    const rect = canvas.getBoundingClientRect();
-    pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    pointerNdc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pointerNdc, camera);
-    const circles = Array.from(nodesByPersonaId.values()).map((n) => n.circle);
-    const hits = raycaster.intersectObjects(circles, false);
-    return hits.length > 0 ? hits[0].object : null;
+  function labelFor(personaId) {
+    return personaId
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join(" ");
   }
 
-  canvas.addEventListener("pointerdown", (event) => {
-    canvas.setPointerCapture(event.pointerId);
-    pointerDownAt = { x: event.clientX, y: event.clientY };
-    lastPointer = { x: event.clientX, y: event.clientY };
-
-    const hit = pickCircleAt(event.clientX, event.clientY);
-    if (hit) {
-      draggingNode = nodesByPersonaId.get(hit.userData.personaId);
-    } else {
-      panning = true;
-    }
-  });
-
-  canvas.addEventListener("pointermove", (event) => {
-    const dx = event.clientX - lastPointer.x;
-    const dy = event.clientY - lastPointer.y;
-    lastPointer = { x: event.clientX, y: event.clientY };
-
-    if (draggingNode) {
-      draggingNode.group.position.x += dx / zoom;
-      draggingNode.group.position.y -= dy / zoom;
-      return;
+  function buildCardMedia(personaId) {
+    const portraitSrc = PORTRAIT_BY_PERSONA_ID[personaId];
+    if (portraitSrc) {
+      const img = document.createElement("img");
+      img.className = "npc-card-portrait";
+      img.src = portraitSrc;
+      img.alt = "";
+      img.loading = "lazy";
+      return img;
     }
 
-    if (panning) {
-      panX -= dx / zoom;
-      panY += dy / zoom;
-      updateCamera();
-      return;
-    }
+    const avatar = document.createElement("div");
+    avatar.className = "npc-card-avatar";
+    avatar.style.background = AVATAR_COLORS[hashString(personaId) % AVATAR_COLORS.length];
+    avatar.textContent = initialsFor(personaId);
+    return avatar;
+  }
 
-    const hit = pickCircleAt(event.clientX, event.clientY);
-    if (hoveredCircle && hoveredCircle !== hit) {
-      const entry = nodesByPersonaId.get(hoveredCircle.userData.personaId);
-      if (entry && entry.circle.userData.personaId !== activePersonaId) {
-        entry.circleMaterial.color.setHex(NODE_COLOR);
-      }
-    }
-    if (hit) {
-      const entry = nodesByPersonaId.get(hit.userData.personaId);
-      if (entry.circle.userData.personaId !== activePersonaId) {
-        entry.circleMaterial.color.setHex(NODE_COLOR_HOVER);
-      }
-      canvas.style.cursor = "pointer";
-    } else {
-      canvas.style.cursor = panning ? "grabbing" : "grab";
-    }
-    hoveredCircle = hit;
-  });
+  const cardsByPersonaId = new Map();
 
-  canvas.addEventListener("pointerup", (event) => {
-    const movedDistance = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
-    const wasClick = movedDistance < 4;
+  function createCard(personaId) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "npc-card";
+    card.dataset.personaId = personaId;
 
-    if (wasClick) {
-      const hit = pickCircleAt(event.clientX, event.clientY);
-      if (hit) {
-        openNpc(hit.userData.personaId);
-      }
-    }
+    card.appendChild(buildCardMedia(personaId));
 
-    draggingNode = null;
-    panning = false;
-  });
+    const name = document.createElement("div");
+    name.className = "npc-card-name";
+    name.textContent = labelFor(personaId);
+    card.appendChild(name);
 
-  canvas.addEventListener("wheel", (event) => {
-    event.preventDefault();
-    const zoomFactor = Math.exp(-event.deltaY * 0.001);
-    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * zoomFactor));
-    updateCamera();
-  }, { passive: false });
+    card.addEventListener("click", () => openNpc(personaId));
 
-  function setActiveNode(personaId) {
-    if (activePersonaId && nodesByPersonaId.has(activePersonaId)) {
-      nodesByPersonaId.get(activePersonaId).circleMaterial.color.setHex(NODE_COLOR);
+    npcGrid.appendChild(card);
+    cardsByPersonaId.set(personaId, card);
+    return card;
+  }
+
+  function renderGrid(personaIds) {
+    npcGrid.innerHTML = "";
+    cardsByPersonaId.clear();
+    personaIds.forEach(createCard);
+  }
+
+  function setActiveCard(personaId) {
+    if (activePersonaId && cardsByPersonaId.has(activePersonaId)) {
+      cardsByPersonaId.get(activePersonaId).classList.remove("active");
     }
     activePersonaId = personaId;
-    if (personaId && nodesByPersonaId.has(personaId)) {
-      nodesByPersonaId.get(personaId).circleMaterial.color.setHex(NODE_COLOR_ACTIVE);
+    if (personaId && cardsByPersonaId.has(personaId)) {
+      cardsByPersonaId.get(personaId).classList.add("active");
     }
-  }
-
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
   }
 
   // ---- Side panel: persona form + chat tester ----------------------------
 
+  let activePersonaId = null;
   let currentPersonaId = null;
 
   async function openNpc(personaId) {
     currentPersonaId = personaId;
-    setActiveNode(personaId);
-    panelNpcName.textContent = personaId;
+    setActiveCard(personaId);
+    panelNpcName.textContent = labelFor(personaId);
     sidePanel.hidden = false;
     chatLog.innerHTML = "";
     saveStatus.textContent = "";
@@ -384,7 +239,7 @@
 
   panelClose.addEventListener("click", () => {
     sidePanel.hidden = true;
-    setActiveNode(null);
+    setActiveCard(null);
     currentPersonaId = null;
   });
 
@@ -444,13 +299,10 @@
   // ---- Boot ---------------------------------------------------------------
 
   async function boot() {
-    resize();
-    animate();
-
     try {
       const npcs = await api.listNpcs();
       npcCountEl.textContent = `${npcs.length} NPC${npcs.length === 1 ? "" : "s"}`;
-      layoutNodes(npcs.map((n) => n.personaId));
+      renderGrid(npcs.map((n) => n.personaId));
     } catch (err) {
       npcCountEl.textContent = "Failed to load NPCs";
       console.error(err);
