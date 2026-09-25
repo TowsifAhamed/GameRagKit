@@ -122,8 +122,8 @@
   // colored initial avatar rather than guessing a wrong character image for
   // them.
   const PORTRAIT_BY_PERSONA_ID = {
-    "guard-north-gate": "images/npc-guard.jpg",
-    "tavern-keeper-mira": "images/npc-tavern-keeper.jpg"
+    "guard-north-gate": "images/npc-guard.jpg?v=3",
+    "tavern-keeper-mira": "images/npc-tavern-keeper.jpg?v=3"
   };
 
   // Same idea as GitHub/Slack's default avatars: a stable color derived from
