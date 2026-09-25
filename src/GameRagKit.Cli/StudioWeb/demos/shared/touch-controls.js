@@ -101,6 +101,13 @@
       body.touch-mode #interact-prompt {
         pointer-events: auto;
         cursor: pointer;
+        /* Above #joystick-zone/#look-zone (z-index 30/31) -- the look zone in particular
+           covers the right 58% of the full screen height, which overlaps this
+           bottom-center-anchored prompt, so without a higher z-index here taps land on
+           the invisible look zone instead of the button underneath it (confirmed via
+           document.elementFromPoint at the prompt's own coordinates returning #look-zone,
+           not #interact-prompt). */
+        z-index: 40;
       }
       body.touch-mode #dialogue-hint {
         display: none;
