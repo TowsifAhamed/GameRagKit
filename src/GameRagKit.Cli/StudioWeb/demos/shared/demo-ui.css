@@ -165,6 +165,44 @@ body.dialogue-open #support-banner {
   padding: 18px 20px;
   backdrop-filter: blur(10px);
   animation: rise-in 0.15s ease-out;
+  /* Caps the panel's own height so it can never be taller than the visible viewport --
+     without this, a tall dialogue-log + header + input on a short landscape-phone screen
+     (~375-420px tall) could make the panel itself exceed what's on screen, independent of
+     the keyboard-overlap problem #dialogue-panel-bottom-offset (set from JS, see
+     touch-controls.js) solves for. max-height + overflow-y here, not on the panel itself
+     being scrollable as a whole, since the header/input must stay visible/reachable --
+     only the log scrolls (see #dialogue-log below).
+  */
+  max-height: min(360px, 70vh);
+  display: flex;
+  flex-direction: column;
+}
+
+/* On a short landscape-phone screen (~375-420px tall is the phone-in-landscape range this
+   game is locked to via the rotate overlay) the desktop sizing above is still too tall and
+   leaves too little of the 3D scene visible/no room once the on-screen keyboard opens.
+   Tighter padding/gaps and a shorter log cap keep the whole panel comfortably above a
+   keyboard on the shortest real devices (iPhone SE landscape is 375px). */
+@media (max-height: 480px) {
+  #dialogue-panel {
+    padding: 10px 14px;
+    max-height: min(220px, 60vh);
+    bottom: 12px;
+  }
+
+  #dialogue-panel-header {
+    margin-bottom: 4px;
+  }
+
+  #dialogue-log {
+    max-height: none;
+    flex: 1;
+    margin-bottom: 8px;
+  }
+
+  #dialogue-hint {
+    display: none;
+  }
 }
 
 @keyframes rise-in {
@@ -210,6 +248,12 @@ body.dialogue-open #support-banner {
   flex-direction: column;
   gap: 10px;
   margin-bottom: 12px;
+  /* #dialogue-panel is now a flex column with its own max-height (see above) so this can
+     grow to fill the remaining space instead of using its own fixed max-height once the
+     short-screen media query below takes over layout -- min-height: 0 is required for a
+     flex child to actually shrink/scroll within its parent instead of forcing the parent
+     to grow past its max-height to fit this element's content. */
+  min-height: 0;
 }
 
 .dialogue-line {
@@ -234,6 +278,7 @@ body.dialogue-open #support-banner {
 #dialogue-form {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 #dialogue-input {

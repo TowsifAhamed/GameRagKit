@@ -26,6 +26,51 @@
     injectRotateOverlay();
     injectJoystick(game);
     injectLookZone(game);
+    injectKeyboardAwarePanel();
+  }
+
+  // Repositions #dialogue-panel to hug the bottom of the actual visible area once the
+  // on-screen keyboard opens, instead of staying anchored to the full layout viewport.
+  // `interactive-widget=resizes-content` in each demo's viewport meta already asks
+  // supporting browsers (recent Chrome/Safari) to shrink the layout viewport itself when
+  // the keyboard opens, which alone fixes this everywhere that meta value is honored --
+  // this is a belt-and-suspenders fallback via the much longer-supported
+  // window.visualViewport API for browsers that don't yet honor that meta value, so the
+  // input row can't end up hidden behind/under the keyboard on those.
+  function injectKeyboardAwarePanel() {
+    if (!window.visualViewport) {
+      return;
+    }
+
+    const panel = document.getElementById("dialogue-panel");
+    if (!panel) {
+      return;
+    }
+
+    const BOTTOM_GAP = 12; // matches the short-screen #dialogue-panel bottom in demo-ui.css
+
+    function reposition() {
+      const vv = window.visualViewport;
+      // Distance from the bottom of the visible (post-keyboard) area to the bottom of the
+      // full layout viewport -- 0 when no keyboard is showing, so both lines below are a
+      // no-op then and the panel keeps using its CSS-only sizing/position.
+      const keyboardOverlap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+      panel.style.bottom = `${BOTTOM_GAP + keyboardOverlap}px`;
+      // Repositioning alone isn't enough: on a short landscape phone the keyboard can cover
+      // roughly half the screen, and the panel's own CSS max-height (demo-ui.css) has no
+      // way to know that -- without also shrinking it here, pushing the panel up by
+      // keyboardOverlap can move its top edge above y=0, off the visible area entirely
+      // (confirmed: a 220px-tall panel pushed up 200px in a 422px-tall viewport put its top
+      // at y=-10). Capping max-height to the actual space left above the keyboard, minus
+      // the gaps on both sides, keeps the whole panel on screen no matter how much of the
+      // viewport the keyboard takes.
+      const availableHeight = vv.height - BOTTOM_GAP * 2;
+      panel.style.maxHeight = `${Math.max(120, availableHeight)}px`;
+    }
+
+    reposition();
+    window.visualViewport.addEventListener("resize", reposition);
+    window.visualViewport.addEventListener("scroll", reposition);
   }
 
   function injectStyles() {
