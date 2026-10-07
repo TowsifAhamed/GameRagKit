@@ -150,6 +150,10 @@ html, body.home-body {
   background-color: #3a2a4a;
 }
 
+.demo-card-thumb--tavern {
+  background-color: #1d2440;
+}
+
 .demo-card-body {
   padding: 18px 20px 20px;
   display: flex;
