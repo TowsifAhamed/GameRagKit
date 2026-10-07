@@ -31,7 +31,7 @@ public sealed class PiperTtsClient : ITextToSpeech
 
         try
         {
-            await RunProcessAsync(_options.ExecutablePath, new[] { "-m", _options.VoiceModelPath, "-f", outputPath }, text, _options.Timeout, cancellationToken)
+            await RunProcessAsync(_options.ExecutablePath, BuildArguments(outputPath), text, _options.Timeout, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!File.Exists(outputPath))
@@ -45,6 +45,25 @@ public sealed class PiperTtsClient : ITextToSpeech
         {
             TryDeleteDirectory(workDir);
         }
+    }
+
+    private List<string> BuildArguments(string outputPath)
+    {
+        var arguments = new List<string> { "-m", _options.VoiceModelPath, "-f", outputPath };
+        void AddIfSet(string flag, double? value)
+        {
+            if (value.HasValue)
+            {
+                arguments.Add(flag);
+                arguments.Add(value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+        }
+
+        AddIfSet("--volume", _options.Volume);
+        AddIfSet("--noise-scale", _options.NoiseScale);
+        AddIfSet("--noise-w", _options.NoiseW);
+        AddIfSet("--length-scale", _options.LengthScale);
+        return arguments;
     }
 
     private static async Task RunProcessAsync(string executablePath, IReadOnlyList<string> arguments, string stdinText, TimeSpan timeout, CancellationToken cancellationToken)

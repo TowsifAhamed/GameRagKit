@@ -173,6 +173,27 @@ public sealed class ProviderResolver
     public ITextToSpeech? TryCreateTextToSpeech(NpcConfig config, ProviderRuntimeOptions runtimeOptions)
     {
         var voiceConfig = config.Providers.Voice?.TextToSpeech;
+        if (voiceConfig != null && OpenAiSpeechClient.IsEngine(voiceConfig.Engine))
+        {
+            // No endpoint = no voice server on this deploy (e.g. the hosted demo without a
+            // Kokoro service), so the persona's voice stays dormant until TTS_ENDPOINT is set.
+            var endpoint = runtimeOptions.TtsEndpoint ?? voiceConfig.Endpoint;
+            if (string.IsNullOrWhiteSpace(voiceConfig.Voice) || string.IsNullOrWhiteSpace(endpoint))
+            {
+                return null;
+            }
+
+            return new OpenAiSpeechClient(new OpenAiSpeechOptions
+            {
+                Endpoint = endpoint,
+                Voice = voiceConfig.Voice,
+                Model = voiceConfig.Model ?? "kokoro",
+                Speed = voiceConfig.Speed,
+                ApiKey = runtimeOptions.TtsApiKey,
+                Timeout = TimeSpan.FromSeconds(voiceConfig.TimeoutSeconds)
+            });
+        }
+
         var voiceModelPath = runtimeOptions.TtsVoiceModelPath ?? voiceConfig?.VoiceModelPath;
         if (string.IsNullOrWhiteSpace(voiceModelPath))
         {
@@ -183,7 +204,11 @@ public sealed class ProviderResolver
         {
             VoiceModelPath = voiceModelPath,
             ExecutablePath = runtimeOptions.TtsExecutablePath ?? voiceConfig?.ExecutablePath ?? "piper",
-            Timeout = TimeSpan.FromSeconds(voiceConfig?.TimeoutSeconds ?? 60)
+            Timeout = TimeSpan.FromSeconds(voiceConfig?.TimeoutSeconds ?? 60),
+            Volume = voiceConfig?.Volume,
+            NoiseScale = voiceConfig?.NoiseScale,
+            NoiseW = voiceConfig?.NoiseW,
+            LengthScale = voiceConfig?.LengthScale
         };
 
         return new PiperTtsClient(options);

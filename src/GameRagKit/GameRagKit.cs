@@ -49,6 +49,7 @@ public static class GameRAGKit
                 CreateQdrantClient(database),
                 database.QdrantCollection ?? "rag",
                 database.EmbeddingDimensions),
+            "memory" => new InMemoryVectorStore(),
             _ => throw new NotSupportedException($"Unknown vector store: {database.Kind}")
         };
     }

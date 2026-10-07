@@ -8,4 +8,9 @@ public sealed record PiperTtsOptions
     // matching `pip install piper-tts`'s installed console script name.
     public string ExecutablePath { get; init; } = "piper";
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(60);
+
+    public double? Volume { get; init; }
+    public double? NoiseScale { get; init; }
+    public double? NoiseW { get; init; }
+    public double? LengthScale { get; init; }
 }

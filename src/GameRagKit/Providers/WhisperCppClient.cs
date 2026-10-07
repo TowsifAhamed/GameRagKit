@@ -64,6 +64,9 @@ public sealed class WhisperCppClient : ISpeechToText
             StartInfo = new ProcessStartInfo
             {
                 FileName = executablePath,
+                // Never let the child inherit the host's stdin (a server's console, a test
+                // runner's pipe): anything that reads it would block until the timeout.
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -95,6 +98,7 @@ public sealed class WhisperCppClient : ISpeechToText
                 throw new InvalidOperationException($"Failed to start process: {executablePath}");
             }
 
+            process.StandardInput.Close();
             process.BeginErrorReadLine();
             await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
 

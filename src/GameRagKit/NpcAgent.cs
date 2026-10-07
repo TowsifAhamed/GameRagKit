@@ -73,20 +73,89 @@ public sealed class NpcAgent : IAsyncDisposable
         _runtimeOptions.LocalEmbedModel = Environment.GetEnvironmentVariable("LOCAL_EMBED_MODEL") ?? _config.Providers.Local?.EmbedModel;
         _runtimeOptions.CloudChatModel = Environment.GetEnvironmentVariable("CLOUD_CHAT_MODEL") ?? _config.Providers.Cloud?.ChatModel;
         _runtimeOptions.CloudEmbedModel = Environment.GetEnvironmentVariable("CLOUD_EMBED_MODEL") ?? _config.Providers.Cloud?.EmbedModel;
-        _runtimeOptions.SttModelPath = Environment.GetEnvironmentVariable("STT_MODEL_PATH") ?? _config.Providers.Voice?.SpeechToText?.ModelPath;
+        _runtimeOptions.SttModelPath = Environment.GetEnvironmentVariable("STT_MODEL_PATH") ?? ResolveVoiceModelPath(_config.Providers.Voice?.SpeechToText?.ModelPath);
         _runtimeOptions.SttExecutablePath = Environment.GetEnvironmentVariable("STT_EXECUTABLE_PATH") ?? _config.Providers.Voice?.SpeechToText?.ExecutablePath;
-        _runtimeOptions.TtsVoiceModelPath = Environment.GetEnvironmentVariable("TTS_VOICE_MODEL_PATH") ?? _config.Providers.Voice?.TextToSpeech?.VoiceModelPath;
+        _runtimeOptions.TtsVoiceModelPath = Environment.GetEnvironmentVariable("TTS_VOICE_MODEL_PATH") ?? ResolveVoiceModelPath(_config.Providers.Voice?.TextToSpeech?.VoiceModelPath);
         _runtimeOptions.TtsExecutablePath = Environment.GetEnvironmentVariable("TTS_EXECUTABLE_PATH") ?? _config.Providers.Voice?.TextToSpeech?.ExecutablePath;
+        _runtimeOptions.TtsEndpoint = Environment.GetEnvironmentVariable("TTS_ENDPOINT") ?? _config.Providers.Voice?.TextToSpeech?.Endpoint;
+        _runtimeOptions.TtsApiKey = Environment.GetEnvironmentVariable("TTS_API_KEY");
 
         return this;
+    }
+
+    /// <summary>
+    /// YAML voice model paths may be bare file names (e.g. "en_US-ryan-medium.onnx") so the
+    /// same persona works on any machine: those are looked up in GAMERAG_VOICE_DIR, then
+    /// next to the YAML file. GAMERAG_VOICE_DIR may list several directories separated by
+    /// the platform path separator (':' on macOS/Linux). Other relative paths resolve
+    /// against the YAML's directory.
+    /// </summary>
+    private string? ResolveVoiceModelPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path))
+        {
+            return path;
+        }
+
+        var voiceDirs = Environment.GetEnvironmentVariable("GAMERAG_VOICE_DIR");
+        if (!string.IsNullOrWhiteSpace(voiceDirs) && Path.GetFileName(path) == path)
+        {
+            foreach (var voiceDir in voiceDirs.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var fromVoiceDir = Path.Combine(voiceDir, path);
+                if (File.Exists(fromVoiceDir))
+                {
+                    return fromVoiceDir;
+                }
+            }
+        }
+
+        return Path.GetFullPath(Path.Combine(_configDirectory, path));
+    }
+
+    // Checks the model file is really there, so a persona that names a voice the current
+    // machine hasn't downloaded degrades to text-only instead of failing on every line.
+    public bool HasSpeechToText => File.Exists(_runtimeOptions.SttModelPath ?? _config.Providers.Voice?.SpeechToText?.ModelPath);
+
+    // For a server-backed engine there's no file to check; a server that's down shows up as
+    // a per-line synthesis error instead.
+    public bool HasTextToSpeech => _config.Providers.Voice?.TextToSpeech is { } tts && OpenAiSpeechClient.IsEngine(tts.Engine)
+        ? !string.IsNullOrWhiteSpace(tts.Voice) && !string.IsNullOrWhiteSpace(_runtimeOptions.TtsEndpoint ?? tts.Endpoint)
+        : File.Exists(_runtimeOptions.TtsVoiceModelPath ?? _config.Providers.Voice?.TextToSpeech?.VoiceModelPath);
+
+    /// <summary>The persona's system prompt, used to describe this NPC to a scene's intent router.</summary>
+    public string PersonaPrompt => _resolvedPersona.SystemPrompt;
+
+    public Task<string> TranscribeAsync(byte[] audioWavBytes, CancellationToken cancellationToken = default)
+        => _router.ResolveSpeechToText(_config, _runtimeOptions).TranscribeAsync(audioWavBytes, cancellationToken);
+
+    public Task<byte[]> SynthesizeAsync(string text, CancellationToken cancellationToken = default)
+        => _router.ResolveTextToSpeech(_config, _runtimeOptions).SynthesizeAsync(text, cancellationToken);
+
+    /// <summary>
+    /// A raw, persona-free completion against this NPC's chat provider (no retrieval, no
+    /// action/mood parsing). Used for out-of-character utility prompts such as a scene's
+    /// "who should answer?" routing decision.
+    /// </summary>
+    internal async Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken)
+    {
+        var chatProvider = await _router.ResolveChatAsync(_config, _runtimeOptions, new AskOptions(), cancellationToken).ConfigureAwait(false);
+        var response = await chatProvider.GetChatResponseAsync(systemPrompt, string.Empty, userPrompt, cancellationToken).ConfigureAwait(false);
+        return response.Text;
     }
 
     public async Task EnsureIndexAsync(CancellationToken cancellationToken = default)
     {
         var manifest = await _manifestRepository.LoadManifestAsync(_config.Persona.Id, cancellationToken).ConfigureAwait(false);
-        foreach (var pair in manifest)
+
+        // An in-memory store starts empty every run, so the on-disk manifest's "already
+        // ingested" hashes would wrongly skip re-embedding into it.
+        if (_vectorStore is not InMemoryVectorStore)
         {
-            _sourceHashes[pair.Key] = pair.Value;
+            foreach (var pair in manifest)
+            {
+                _sourceHashes[pair.Key] = pair.Value;
+            }
         }
 
         var indexCache = new Dictionary<IndexScopeKey, VectorIndex>();

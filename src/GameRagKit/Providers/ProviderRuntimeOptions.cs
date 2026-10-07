@@ -25,4 +25,6 @@ public sealed class ProviderRuntimeOptions
     public string? SttExecutablePath { get; set; }
     public string? TtsVoiceModelPath { get; set; }
     public string? TtsExecutablePath { get; set; }
+    public string? TtsEndpoint { get; set; }
+    public string? TtsApiKey { get; set; }
 }
