@@ -97,6 +97,7 @@ gcloud run deploy gameragkit \
   --image "gcr.io/$(gcloud config get-value project)/gameragkit" \
   --region us-central1 \
   --allow-unauthenticated \
+  --memory 1Gi \
   --set-env-vars "DB=pgvector" \
   --set-env-vars "CONNECTION_STRING=Host=...;Port=5432;Username=...;Password=...;Database=...;SSL Mode=Require;Trust Server Certificate=true" \
   --set-env-vars "PROVIDER=openai" \
@@ -115,6 +116,7 @@ gcloud run deploy gameragkit \
   --image "gcr.io/$(gcloud config get-value project)/gameragkit" \
   --region us-central1 \
   --allow-unauthenticated \
+  --memory 1Gi \
   --set-env-vars "DB=pgvector" \
   --set-env-vars "CONNECTION_STRING=Host=...;Port=5432;Username=...;Password=...;Database=...;SSL Mode=Require;Trust Server Certificate=true" \
   --set-env-vars "PROVIDER=openai" \
@@ -124,6 +126,13 @@ gcloud run deploy gameragkit \
 ```
 
 On success, the deploy step prints your service URL (`https://gameragkit-xxxxx-uc.a.run.app`).
+
+> **Memory: 1 GiB.** The image bundles the Kokoro text-to-speech server so demo NPCs speak
+> with natural voices (see [scenes.md](scenes.md#hosted-deploys-railway-cloud-run)); the
+> container uses roughly 0.8 GB, which is why the commands above pass `--memory 1Gi`
+> (Cloud Run's 512 MiB default would run out of memory). To stay on 512 MiB, add
+> `--set-env-vars "KOKORO=0"`: NPCs then speak with the player's browser voices instead.
+> 1 GiB uses the free tier's memory allowance twice as fast as 512 MiB.
 
 > An embedding model is required even for an NPC with no lore sources — every `/ask` call
 > embeds the player's question to search the vector store, regardless of whether anything

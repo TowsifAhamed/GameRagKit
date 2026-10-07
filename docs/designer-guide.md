@@ -35,7 +35,7 @@ Tip: add metadata by placing files under `world/`, `region/<id>/`, `faction/<id>
 
 Want the NPC to give items, start quests, or take other gameplay actions during dialogue? See [`docs/actions.md`](actions.md) for the `persona.actions` YAML format.
 
-Want players to speak to the NPC and hear it reply out loud? See [`docs/voice.md`](voice.md) for the `providers.voice` YAML format and the `/ask/voice` endpoint.
+Want players to speak to the NPC and hear it reply out loud, or talk to a whole group of NPCs at once? See [`docs/scenes.md`](scenes.md) for giving each NPC its own voice (`providers.voice`, Kokoro or Piper) and the `/scene` API, and [`docs/voice.md`](voice.md) for the single-NPC `/ask/voice` endpoint.
 
 Want the NPC to remember how it feels about the player across conversations? See [`docs/mood.md`](mood.md) for `persona.mood_tracking`.
 

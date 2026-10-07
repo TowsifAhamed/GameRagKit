@@ -243,7 +243,8 @@ samples/example-npcs/.gamerag/
 1. **Create Your Own NPC**: Copy the example structure and modify the YAML and lore files
 2. **Add Memory**: Use the `RememberAsync` API to let NPCs remember conversations
 3. **Deploy with Docker**: See `Dockerfile` for containerized deployment
-4. **Integrate with Game Engine**: See `samples/unity/` or `samples/unreal/` for integration guides
+4. **Integrate with Game Engine**: See [`unity-package/`](unity-package/com.gameragkit.unity/) or [`unreal-plugin/`](unreal-plugin/GameRagKit/) (installable, including voice conversations)
+5. **Add Voice**: Give each NPC its own voice and let players talk to one NPC or a group: see [`docs/scenes.md`](docs/scenes.md) (`scripts/run-voice-scene.sh` runs it all locally)
 
 ## Performance Notes
 

@@ -4,6 +4,12 @@ Three real Three.js game scenes proving GameRagKit NPCs work inside an actual fi
 game environment, not just an admin tool — walk around, approach an NPC, and talk to it
 using the real `/ask` endpoint.
 
+> **Maintained copy:** the scenes Studio serves (and the live demo runs) live in
+> [`src/GameRagKit.Cli/StudioWeb/demos/`](../../src/GameRagKit.Cli/StudioWeb/demos/). That
+> copy has voice (hold V to talk, NPC voices, gestures) and a fourth scene, the Tavern
+> Table group conversation (see [docs/scenes.md](../../docs/scenes.md)). This folder keeps
+> the original three text-only scenes as a standalone, serve-anywhere reference.
+
 **[Try it live](https://gameragkit.up.railway.app/)** — no setup required. Hosting and LLM
 costs for this demo are paid out of pocket; see [Support this project](../../README.md#support-this-project)
 if you'd like to help keep it running.

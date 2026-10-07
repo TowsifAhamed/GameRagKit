@@ -98,7 +98,8 @@ You now have:
 
 - 📖 Read `SETUP_GUIDE.md` for detailed documentation
 - 🔍 Check `TESTING_EVIDENCE.md` to see all features
-- 🎮 See `samples/unity/` or `samples/unreal/` for game engine integration
+- 🎮 See [`unity-package/`](unity-package/com.gameragkit.unity/) or [`unreal-plugin/`](unreal-plugin/GameRagKit/) for game engine integration
+- 🎙️ Want to talk to NPCs out loud? `scripts/run-voice-scene.sh` sets up free local speech models and opens a voice-enabled group conversation demo; see [`docs/scenes.md`](docs/scenes.md)
 - ✍️ Create your own NPC by copying `samples/example-npcs/guard-north-gate.yaml`
 
 ## Command Cheat Sheet

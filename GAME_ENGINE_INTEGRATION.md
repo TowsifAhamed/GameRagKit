@@ -32,6 +32,21 @@ This document provides evidence that GameRagKit successfully integrates with Uni
 └─────────────────────┘
 ```
 
+## 🎙️ Voice conversations (0.2.0)
+
+Both engine clients can now hold spoken conversations with one NPC or a group, through
+the server's `/scene` API ([docs/scenes.md](docs/scenes.md)): push-to-talk, each reply in
+the NPC's own positional voice, NPC-to-NPC replies, and interruptions that keep only the
+words the player actually heard.
+
+- **Unity:** `NpcSceneManager` in [`unity-package/com.gameragkit.unity`](unity-package/com.gameragkit.unity/)
+  (Voice Scene sample, Play Mode tests).
+- **Unreal:** `UNpcSceneComponent` in [`unreal-plugin/GameRagKit`](unreal-plugin/GameRagKit/)
+  (Blueprint events; automation tests incl. an end-to-end conversation, built and passing on UE 5.8).
+
+The sections below cover the original text API (`/ask`, `/ask/stream`) and the legacy
+`samples/` scripts.
+
 ## ✅ Integration Components Created
 
 ### Unity Integration

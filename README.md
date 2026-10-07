@@ -10,6 +10,7 @@ GameRAGKit is a drop-in retrieval augmented generation (RAG) toolkit for buildin
 - **Engine agnostic.** Embed the library directly in Unity/other C# runtimes or host the bundled HTTP service for Unreal and everything else.
 - **Provider agnostic.** Run Ollama locally, route to OpenAI/Azure/Gemini/Groq/OpenRouter/Mistral, or mix them with hybrid routing. See [Provider Compatibility](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) for full details.
 - **Designer friendly.** Personas live in YAML, lore lives in folders, and the CLI handles ingestion, chat smoke tests, and packaging.
+- **Voice-ready.** Players can talk to one NPC or a whole group out loud: NPCs answer in their own voices, reply to each other, and remember what they were saying when the player cuts in. Speech runs on free local models (whisper.cpp, Kokoro, Piper), with Unity and Unreal clients included. See [docs/scenes.md](docs/scenes.md).
 
 > Dual-licensed: PolyForm Noncommercial 1.0.0 for community use with commercial terms available from the author.
 
@@ -49,7 +50,7 @@ Or via Package Manager Console:
 Install-Package GameRagKit
 ```
 
-**Versioning:** Each push to `main` automatically publishes a new version with an auto-incremented patch number (e.g., 0.1.1, 0.1.2, etc.). To publish a specific version, push a tag like `v0.2.0` which will publish exactly as `0.2.0`.
+**Versioning:** Each push to `main` automatically publishes a new version with an auto-incremented patch number (e.g., 0.2.1, 0.2.2, etc.). To publish a specific version, push a tag like `v0.2.0` which will publish exactly as `0.2.0`.
 
 ### From Source
 
@@ -72,9 +73,15 @@ GameRagKit/
 ├── tests/                  # Unit and integration tests
 │   └── GameRagKit.Tests/  # Test suite for core library
 │
+├── unity-package/          # Installable Unity package (UPM), incl. voice scenes
+├── unreal-plugin/          # Installable Unreal plugin, incl. voice scenes
+│
 ├── samples/                # Integration examples
-│   ├── unity/             # Unity integration guide and sample scripts
-│   └── unreal/            # Unreal Engine integration (C++/Blueprint examples)
+│   ├── unity/             # Legacy Unity sample scripts
+│   └── unreal/            # Legacy Unreal C++/Blueprint examples
+│
+├── scripts/                # Local voice tooling (setup-local-voice.sh, run-voice-scene.sh, kokoro_server.py)
+├── deploy/                 # Hosted demo configs, container start script, Kokoro service Dockerfile
 │
 ├── examples/               # Ready-to-use configurations
 │   └── configs/           # Example NPC YAML files for all providers
@@ -158,6 +165,17 @@ The demo repository is a great way to quickly understand how GameRagKit works be
 
 ## Release highlights
 
+### 0.2.0: voice conversations
+
+- **Multi-character scenes** (`/scene/ask`, `/scene/voice`, `SceneDirector`): one player line goes to a group of NPCs, an intent router decides who answers (direct address, "everyone", an LLM router, or whoever spoke last), and NPCs reply in turn and react to each other by name.
+- **Per-NPC voices** with local, free models: whisper.cpp for speech-to-text, and Kokoro (natural, CPU-friendly) or Piper for text-to-speech. Any OpenAI-compatible speech server also works (`engine: openai_speech`).
+- **Interruptions that make sense**: when the player talks over an NPC, only the words actually heard are remembered; the NPC keeps what it didn't get to say and brings it up later, and "go on" hands it the floor back.
+- **Unity and Unreal voice clients** (`NpcSceneManager`, `UNpcSceneComponent`): push-to-talk, positional NPC voices, gesture and facing hooks.
+- **Try it offline** in one command: `scripts/run-voice-scene.sh`, then open `http://localhost:5290/demos/tavern.html`. The [live demo](https://gameragkit.up.railway.app/) runs Kokoro on a CPU; its home page compares that with GPU-class voices (Qwen3-TTS, Chatterbox).
+- `DB=memory` in-process vector store, for running locally without Postgres or Qdrant.
+
+### Earlier
+
 - **LLamaSharp in-process inference** lets you skip Ollama entirely, run fully offline inside your game server, and point `model_path`/`embed_model_path` at the GGUF files you own.
 - **Token-by-token streaming** is live across SDKs and HTTP: use `NpcAgent.StreamAsync`, `/ask/stream` (SSE), or the CLI chat command to watch cinematic, partial responses roll in.
 - **Pack builder CLI** (`gamerag pack`) plus the [shipping guide](docs/shipping-to-players.md) produce deployable Lore + `.gamerag` bundles for consoles or locked-down servers.
@@ -179,7 +197,7 @@ Answers blend world/region/faction lore with the current run's `RUNTIME STATE` s
 ### 1. Install requirements
 
 - .NET 8 SDK
-- Database: PostgreSQL 16+ OR Qdrant (use included [`docker-compose.yml`](docker-compose.yml))
+- Database: PostgreSQL 16+ OR Qdrant (use included [`docker-compose.yml`](docker-compose.yml)), or `DB=memory` for an in-process store with no database at all (great for prototyping; re-embeds lore on every start)
 - Optional: [Ollama](https://ollama.com/) with models such as `llama3.2:3b-instruct-q4_K_M` and `nomic-embed-text`
 
 ### 2. Prepare an NPC config
@@ -372,12 +390,12 @@ Routing rules combine config defaults with per-question overrides:
   - Hybrid routing examples
 
 ### Engine Integrations
-- **[unity-package/com.gameragkit.unity/](unity-package/com.gameragkit.unity/)** - Installable Unity package (UPM), real incremental streaming, actions, world state
-- **[unreal-plugin/GameRagKit/](unreal-plugin/GameRagKit/)** - Installable Unreal plugin, real incremental streaming, actions, world state
+- **[unity-package/com.gameragkit.unity/](unity-package/com.gameragkit.unity/)** - Installable Unity package (UPM), real incremental streaming, actions, world state, voice conversations (`NpcSceneManager`)
+- **[unreal-plugin/GameRagKit/](unreal-plugin/GameRagKit/)** - Installable Unreal plugin, real incremental streaming, actions, world state, voice conversations (`UNpcSceneComponent`)
 - **[samples/unity/](samples/unity/)**, **[samples/unreal/](samples/unreal/)** - Legacy loose-script samples, kept for reference
 
 ### Documentation
-- **[docs/scenes.md](docs/scenes.md)** - Multi-character voice conversations: intent routing, NPC-to-NPC replies, per-NPC local voices (whisper.cpp + Piper)
+- **[docs/scenes.md](docs/scenes.md)** - Multi-character voice conversations: intent routing, NPC-to-NPC replies, interruptions, per-NPC local voices (whisper.cpp + Kokoro/Piper), hosting notes
 - **[docs/voice.md](docs/voice.md)** - Single-NPC speech-to-text / text-to-speech (`/ask/voice`)
 - **[docs/deploy-cloud-run.md](docs/deploy-cloud-run.md)** - Deploy your own free instance (Google Cloud Run + Neon Postgres, $0 within free tier limits)
 - **[docs/2025-11-29/](docs/2025-11-29/)** - Latest updates and issue reports
@@ -394,7 +412,9 @@ Routing rules combine config defaults with per-question overrides:
 ## Roadmap
 
 - Advanced router strategies (latency, budget, dynamic confidence) that balance responsiveness with cloud spend.
-- In-memory vector store option for ultra-fast prototyping and scenarios that skip external databases.
+- Hands-free voice: always-on mic with voice-activity detection, so players can just talk over NPCs instead of holding a key.
+- Sentence-by-sentence voice streaming, so NPCs start speaking before their whole line is synthesized.
+- GPU voice presets (Qwen3-TTS voice design, Chatterbox) behind the existing `openai_speech` engine, for players with high-end GPUs.
 - More actionable diagnostics around YAML/provider configuration so errors directly point to the offending section.
 - Expanded integration tests (systems assistant, streaming, pack builder) to guard regressions across providers and runtimes.
 

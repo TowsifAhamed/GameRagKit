@@ -10,7 +10,16 @@ dotnet run --project src/GameRagKit.Cli -- studio --config ./NPCs --port 5290
 ```
 
 Open `http://localhost:5290`. Every `.yaml` file under `--config` (searched recursively,
-same as `gamerag serve`) becomes a node on the canvas.
+same as `gamerag serve`) becomes a node on the canvas. `--config` is optional: the bundled
+demo NPCs (the WebGL demo scenes' cast) always load, so `studio` on its own is enough to
+try the demos.
+
+The landing page links four playable demo scenes (Single NPC, City, Metropolis, and the
+Tavern Table group conversation). All of them support voice: hold **V** (or the mic
+button) and talk, and NPCs answer out loud. For server-side speech with natural voices,
+run `scripts/run-voice-scene.sh` instead of `studio` directly; it starts whisper.cpp and a
+Kokoro voice server alongside Studio (see [scenes.md](scenes.md)). Without them, the demos
+fall back to the browser's own speech recognition and voices.
 
 ## What it does
 
@@ -33,7 +42,8 @@ same as `gamerag serve`) becomes a node on the canvas.
   traits, routing/provider settings, and lore files are not exposed in the UI yet — edit
   those fields directly in the YAML file as before.
 - No streaming in the chat tester — it calls `/ask` (non-streaming), not `/ask/stream`.
-- No voice testing (`/ask/voice`) in the chat panel.
+- The persona editor's chat tester is text-only; for voice, use the demo scenes (hold V)
+  or call `/scene/voice` directly.
 - Single-user, no auth by default — same as `gamerag serve`, set `SERVICE_API_KEY` if you
   need to restrict access (studio's `/studio/api/*` routes are protected by the same
   `ApiAuthenticationMiddleware` as `/ask`).

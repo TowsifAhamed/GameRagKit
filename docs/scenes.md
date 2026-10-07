@@ -160,6 +160,14 @@ decide whether to show a mic and whether to expect server audio.
 When `synthesizeReply` is true, every `turn` gets exactly one matching `audio` event, so
 clients can queue playback by index without timeouts.
 
+## Engine clients
+
+- **Unity:** `NpcSceneManager` ([unity-package/com.gameragkit.unity](../unity-package/com.gameragkit.unity/README.md#voice-conversations-one-or-more-npcs)): push-to-talk via `Microphone`, each NPC's voice from its own `AudioSource`, Animator/head-bone hooks.
+- **Unreal:** `UNpcSceneComponent` ([unreal-plugin/GameRagKit](../unreal-plugin/GameRagKit/README.md#voice-conversations-one-or-more-npcs)): push-to-talk via the AudioCapture plugin, voices attached to each NPC actor, Blueprint events.
+- **Browser:** `voice-io.js`, `scene-controller.js` and `dialogue-controller.js` in [`src/GameRagKit.Cli/StudioWeb/demos/shared/`](../src/GameRagKit.Cli/StudioWeb/demos/shared/), which also fall back to the browser's own speech recognition and voices when the server has no speech models.
+
+All three implement the same interruption bookkeeping described above.
+
 ## Notes for game clients
 
 - **Spatial audio**: play each clip from the speaking NPC's position. The web demo uses a
