@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
   <title>GameRagKit Demo — Tavern Table</title>
-  <link rel="stylesheet" href="shared/demo-ui.css?v=7" />
+  <link rel="stylesheet" href="shared/demo-ui.css?v=8" />
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
@@ -19,12 +19,12 @@
 
   <div id="interact-prompt" hidden></div>
 
-  <div id="dialogue-panel" class="scene-panel" hidden>
+  <div id="dialogue-panel" hidden>
     <div id="dialogue-panel-header">
       <div id="dialogue-npc-name">Mira &middot; Bram &middot; Oswin</div>
-      <button id="dialogue-close" type="button" aria-label="Leave conversation">&times;</button>
+      <button id="dialogue-close" type="button" aria-label="Close conversation">&times;</button>
     </div>
-    <div id="dialogue-log" aria-live="polite"></div>
+    <div id="dialogue-log"></div>
     <div id="scene-status" hidden></div>
     <form id="dialogue-form">
       <button id="mic-button" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold V)">
@@ -33,19 +33,15 @@
       <input id="dialogue-input" type="text" placeholder="Say something to the table..." autocomplete="off" />
       <button type="submit">Send</button>
     </form>
-    <div id="dialogue-hint">
-      <label class="voice-toggle"><input id="voice-toggle" type="checkbox" checked /> Voices: <span id="voice-mode">…</span></label>
-      <span id="mic-hint" hidden>&middot; hold <kbd>V</kbd> or the mic to talk &middot; <kbd>Enter</kbd> to type</span>
-      <span id="scene-routing"></span>
-    </div>
+    <div id="dialogue-hint">Esc to end conversation<span id="mic-hint" hidden> &middot; hold V or the mic to talk</span></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="shared/game-engine.js?v=6"></script>
   <script src="shared/touch-controls.js?v=3"></script>
-  <script src="shared/voice-io.js?v=6"></script>
-  <script src="shared/scene-controller.js?v=7"></script>
+  <script src="shared/voice-io.js?v=7"></script>
+  <script src="shared/scene-controller.js?v=8"></script>
   <script>
     const SERVER_URL = window.GAMERAG_SERVER_URL || "";
 

@@ -274,9 +274,6 @@
       caps = await voice.capabilities(members.map((m) => m.npc.npcId));
       micBtn.hidden = !caps.canListen;
       el("mic-hint").hidden = micBtn.hidden;
-      el("voice-mode").textContent = caps.serverTts.size
-        ? `server voices (${caps.serverTts.size}/${members.length})`
-        : "browser voices";
     }
 
     function openScene() {
@@ -289,7 +286,6 @@
       log.innerHTML = "";
       history = [];
       unsaid.clear();
-      routingEl.textContent = "";
       voice.ensureAudio();
       if (config.openingLine) {
         const opener = members[0];
@@ -380,7 +376,8 @@
       const controller = new AbortController();
       currentRequest = controller;
 
-      const withVoice = voiceToggle.checked;
+      // Voice is on unless the page offers a toggle and it's unchecked.
+      const withVoice = voiceToggle ? voiceToggle.checked : true;
       const b = newBeat(withVoice);
       // Server audio only if at least one NPC has a server voice; the rest (and every NPC
       // on a server with none) fall back to browser speech per turn.
@@ -429,7 +426,7 @@
           remember("player", event.text);
           break;
         case "routing":
-          routingEl.textContent = `→ ${event.responders.map(nameOf).join(" & ")} · ${event.method.replace(/-/g, " ")}`;
+          if (routingEl) routingEl.textContent = `→ ${event.responders.map(nameOf).join(" & ")} · ${event.method.replace(/-/g, " ")}`;
           break;
         case "thinking":
           setNpcState(event.npc, "thinking");

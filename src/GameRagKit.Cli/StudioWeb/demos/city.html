@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
   <title>GameRagKit Demo — City</title>
-  <link rel="stylesheet" href="shared/demo-ui.css?v=7" />
+  <link rel="stylesheet" href="shared/demo-ui.css?v=8" />
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
@@ -44,19 +44,15 @@
       <input id="dialogue-input" type="text" placeholder="Say something..." autocomplete="off" />
       <button type="submit">Send</button>
     </form>
-    <div id="dialogue-hint" class="voice-hint">
-      <label class="voice-toggle"><input id="voice-toggle" type="checkbox" checked /> Voice: <span id="voice-mode">…</span></label>
-      <span id="mic-hint" hidden>&middot; hold <kbd>V</kbd> or the mic to talk &middot; <kbd>Enter</kbd> to type</span>
-      <span>&middot; Esc to end conversation</span>
-    </div>
+    <div id="dialogue-hint">Esc to end conversation<span id="mic-hint" hidden> &middot; hold V or the mic to talk</span></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="shared/game-engine.js?v=6"></script>
   <script src="shared/touch-controls.js?v=3"></script>
-  <script src="shared/voice-io.js?v=6"></script>
-  <script src="shared/dialogue-controller.js?v=5"></script>
+  <script src="shared/voice-io.js?v=7"></script>
+  <script src="shared/dialogue-controller.js?v=6"></script>
   <script>
     // Bundled with Studio: same origin as this page by default (no separate gamerag serve
     // process needed), unless window.GAMERAG_SERVER_URL is set for a different deployment.

@@ -179,7 +179,8 @@
       const controller = new AbortController();
       currentRequest = controller;
 
-      const withVoice = !!(voiceToggle && voiceToggle.checked);
+      // Voice is on unless the page offers a toggle and it's unchecked.
+      const withVoice = voiceToggle ? voiceToggle.checked : true;
       const serverVoice = withVoice && caps.serverTts.has(npc.npcId);
       const history = transcript.slice(-HISTORY_LIMIT).map((t) => ({ speaker: t.role === "player" ? "player" : npc.npcId, text: t.text, interrupted: t.interrupted || undefined }));
       // An archetype NPC (many crowd figures sharing one backend agent) can otherwise give
