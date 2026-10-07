@@ -16,12 +16,15 @@ Installed and started by scripts/setup-local-voice.sh / scripts/run-voice-scene.
 import argparse
 import io
 import json
+import math
+import os
 import threading
 import time
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import numpy as np
+import onnxruntime as ort
 from kokoro_onnx import Kokoro
 
 MAX_INPUT_CHARS = 2000
@@ -42,6 +45,26 @@ def to_wav(samples: np.ndarray, sample_rate: int) -> bytes:
     return buffer.getvalue()
 
 
+def default_threads() -> int:
+    """CPUs this process may actually use. Containers often see every host core but get a
+    small CPU quota; ONNX Runtime sizing its thread pool to the host core count then thrashes
+    (measured ~5x slower than real time on a hosted 2-vCPU container), so honour the cgroup
+    quota when there is one."""
+    try:
+        quota, period = open("/sys/fs/cgroup/cpu.max").read().split()[:2]
+        if quota != "max":
+            return max(1, math.ceil(int(quota) / int(period)))
+    except (OSError, ValueError):
+        pass
+    # No quota visible: the host's core count says little about our share of it, and one
+    # synthesis gains almost nothing past ~4 threads, so cap it.
+    try:
+        visible = len(os.sched_getaffinity(0))
+    except AttributeError:
+        visible = os.cpu_count() or 1
+    return max(1, min(4, visible))
+
+
 def lang_for(voice: str) -> str:
     # Kokoro voice ids are prefixed by accent: a* = American, b* = British English.
     return "en-gb" if voice.startswith("b") else "en-us"
@@ -54,15 +77,23 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8880)
     parser.add_argument("--default-voice", default="af_heart")
+    parser.add_argument("--threads", type=int, default=int(os.environ.get("KOKORO_THREADS", "0")) or None,
+                        help="ONNX Runtime threads (default: KOKORO_THREADS, else the CPU quota)")
     args = parser.parse_args()
 
-    kokoro = Kokoro(args.model, args.voices)
+    threads = args.threads or default_threads()
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = threads
+    options.inter_op_num_threads = 1
+    options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    session = ort.InferenceSession(args.model, sess_options=options, providers=["CPUExecutionProvider"])
+    kokoro = Kokoro.from_session(session, args.voices)
     voices = sorted(kokoro.get_voices())
     lock = threading.Lock()  # one synthesis at a time; parallel runs just fight over the CPU
 
     started = time.time()
     kokoro.create("Ready.", voice=args.default_voice, speed=1.0, lang="en-us")  # warm-up
-    print(f"Kokoro ready on http://{args.host}:{args.port} ({len(voices)} voices, warm-up {time.time() - started:.1f}s)", flush=True)
+    print(f"Kokoro ready on http://{args.host}:{args.port} ({len(voices)} voices, {threads} threads, {os.path.basename(args.model)}, warm-up {time.time() - started:.1f}s)", flush=True)
 
     class Handler(BaseHTTPRequestHandler):
         def _json(self, status: int, payload: dict) -> None:
