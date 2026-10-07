@@ -1,16 +1,20 @@
 {
   "name": "com.gameragkit.unity",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "GameRagKit Unity Client",
-  "description": "HTTP client for talking to a GameRagKit server: ask NPCs questions, stream responses for typewriter effects, send structured world state, and handle validated NPC actions.",
+  "description": "HTTP client for talking to a GameRagKit server: ask NPCs questions, stream responses for typewriter effects, send structured world state, handle validated NPC actions, and hold voice conversations with one or more NPCs (push-to-talk, per-NPC spatial voices, NPC-to-NPC replies, interruptions).",
   "unity": "2021.3",
   "license": "SEE LICENSE IN LICENSE.md",
   "keywords": [
-    "npc",
-    "dialogue",
     "ai",
+    "dialogue",
+    "llm",
+    "npc",
     "rag",
-    "llm"
+    "speech",
+    "stt",
+    "tts",
+    "voice"
   ],
   "author": {
     "name": "Towsif Ahamed"
@@ -20,6 +24,16 @@
       "displayName": "Basic Dialogue",
       "description": "Minimal TextMeshPro-based chat UI wired to an NPC via NpcDialogueManager.",
       "path": "Samples~/BasicDialogue"
+    },
+    {
+      "displayName": "Voice Scene",
+      "description": "Hold-to-talk voice conversation with a group of NPCs via NpcSceneManager, with an IMGUI subtitle log.",
+      "path": "Samples~/VoiceScene"
     }
-  ]
+  ],
+  "dependencies": {
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.unitywebrequest": "1.0.0",
+    "com.unity.modules.animation": "1.0.0"
+  }
 }

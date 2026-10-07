@@ -45,6 +45,44 @@ namespace GameRagKit.Unity
             return type != null;
         }
 
+        /// <summary>Parses one /scene/ask or /scene/voice server-sent event.</summary>
+        public static bool TryParseSceneEvent(string json, out SceneEvent sceneEvent)
+        {
+            sceneEvent = null;
+            if (!(MiniJson.Parse(json) is Dictionary<string, object> root))
+            {
+                return false;
+            }
+
+            var type = GetString(root, "type");
+            if (type == null)
+            {
+                return false;
+            }
+
+            string mood = null;
+            if (root.TryGetValue("mood", out var moodValue) && moodValue is Dictionary<string, object> moodObj)
+            {
+                mood = GetString(moodObj, "value");
+            }
+
+            sceneEvent = new SceneEvent
+            {
+                Type = type,
+                Text = GetString(root, "text"),
+                Npc = GetString(root, "npc"),
+                Index = root.TryGetValue("index", out var index) && index is double d ? (int)d : 0,
+                Reason = GetString(root, "reason"),
+                Method = GetString(root, "method"),
+                Responders = GetStringArray(root, "responders"),
+                Mood = mood,
+                Actions = GetActions(root, "actions"),
+                WavBase64 = GetString(root, "wavBase64"),
+                Error = GetString(root, "error")
+            };
+            return true;
+        }
+
         private static string GetString(Dictionary<string, object> obj, string key)
         {
             return obj.TryGetValue(key, out var value) ? value as string : null;

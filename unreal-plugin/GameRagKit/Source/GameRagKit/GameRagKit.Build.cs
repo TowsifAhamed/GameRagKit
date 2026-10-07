@@ -13,7 +13,8 @@ public class GameRagKit : ModuleRules
             "Engine",
             "HTTP",
             "Json",
-            "JsonUtilities"
+            "JsonUtilities",
+            "AudioCaptureCore"
         });
     }
 }

@@ -100,10 +100,16 @@ output is always 16-bit PCM mono WAV at the voice model's native sample rate (co
 
 ## Engine client support
 
-Neither the Unity package (`unity-package/com.gameragkit.unity`) nor the Unreal plugin
-(`unreal-plugin/GameRagKit`) has `/ask/voice` client support yet — this phase only covers
-the server side. Recording player audio and calling this endpoint from a game client is
-left as follow-up work.
+Both engine clients do voice through the `/scene` API (one NPC or a group), which builds
+on `/ask/voice`'s speech-to-text and text-to-speech and adds routing, NPC-to-NPC replies and
+interruption memory — see [scenes.md](scenes.md):
+
+- **Unity** (`unity-package/com.gameragkit.unity`): `NpcSceneManager` — push-to-talk via
+  `Microphone`, per-NPC `AudioSource` playback, optional Animator/head-bone hooks. See the
+  package README and the Voice Scene sample.
+- **Unreal** (`unreal-plugin/GameRagKit`): `UNpcSceneComponent` — push-to-talk via the
+  engine's AudioCapture plugin, voices attached to each NPC actor, Blueprint events. See
+  the plugin README.
 
 ## Known limitations
 

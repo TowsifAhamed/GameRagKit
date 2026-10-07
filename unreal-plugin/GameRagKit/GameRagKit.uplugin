@@ -1,9 +1,9 @@
 {
   "FileVersion": 3,
-  "Version": 1,
-  "VersionName": "0.1.0",
+  "Version": 2,
+  "VersionName": "0.2.0",
   "FriendlyName": "GameRagKit",
-  "Description": "HTTP client for talking to a GameRagKit server: ask NPCs questions, stream responses for typewriter effects, send structured world state, and handle validated NPC actions.",
+  "Description": "HTTP client for talking to a GameRagKit server: ask NPCs questions, stream responses for typewriter effects, send structured world state, handle validated NPC actions, and hold voice conversations with one or more NPCs (push-to-talk, per-NPC spatial voices, NPC-to-NPC replies, interruptions).",
   "Category": "AI",
   "CreatedBy": "Towsif Ahamed",
   "CreatedByURL": "https://github.com/TowsifAhamed/GameRagKit",
@@ -14,6 +14,12 @@
   "CanContainContent": false,
   "IsBetaVersion": true,
   "Installed": false,
+  "Plugins": [
+    {
+      "Name": "AudioCapture",
+      "Enabled": true
+    }
+  ],
   "Modules": [
     {
       "Name": "GameRagKit",

@@ -104,6 +104,62 @@ dialogueManager.AskNpcStreaming(
     });
 ```
 
+## Voice conversations (one or more NPCs)
+
+`NpcSceneManager` holds spoken conversations through the server's `/scene` API (see
+[`docs/scenes.md`](../../docs/scenes.md)): the player holds a key and talks (or types), the
+server decides which NPC(s) should answer, and each reply plays in that NPC's own voice
+from an `AudioSource` on the NPC. NPCs can answer each other, and the player can talk over
+them: only the words actually heard are remembered, the NPC keeps what it didn't get to
+say, and "go on" hands it the floor back. One participant works too.
+
+```csharp
+using GameRagKit.Unity;
+
+public class TavernTable : MonoBehaviour
+{
+    public NpcSceneManager scene; // participants set in the Inspector: npcId, displayName, voice (AudioSource), root, animator, headBone
+    public TMPro.TMP_Text subtitle;
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.V)) scene.StartListening();      // push-to-talk down (also cuts NPCs off)
+        if (Input.GetKeyUp(KeyCode.V)) scene.StopListeningAndSend();  // push-to-talk up
+    }
+
+    void Start()
+    {
+        scene.LineStarted += line => subtitle.text = $"{line.NpcId}: {line.Text}"; // line.Gesture, line.Actions, line.Mood
+        scene.LineFinished += (line, interrupted, said, unsaid) => { if (interrupted) subtitle.text = said + " —"; };
+        scene.Say("Mira, does Bram owe you money?");                 // typed input works the same way
+    }
+}
+```
+
+- **Voices** come from the server (Kokoro or Piper per NPC). Set each `AudioSource`'s
+  spatial blend to 1 so speech comes from where the NPC stands. Without server voices,
+  lines still arrive (and stay on screen for their reading time) as text.
+- **Microphone input** needs speech-to-text on the server (whisper.cpp). Already have your
+  own capture or recognizer? Call `SendSpeech(wavBytes)` (any 16-bit PCM WAV; see
+  `WavUtility.EncodeSpeechWav`) or `Say(text)`.
+- **Body language**, all optional per participant: `root` turns to face whoever the NPC is
+  talking or listening to; `animator` gets a `Talking` bool while speaking and a trigger
+  named after the suggested gesture (`Interact`, `Cheer`, `Block`, `Use_Item`, or the
+  participant's `signatureGesture`) when the controller defines it; `headBone` nods with
+  the loudness of the speech. `GetSpeechLevel(npcId)` gives that loudness for jaw bones or
+  blend shapes.
+- **Interruptions**: `Interrupt()` (also called by `StartListening` and `Say`) stops the
+  voice mid-line and reports `said`/`unsaid` through `LineFinished`; `History` holds only
+  what was heard.
+- Unity 2022+ blocks plain `http://` by default: set **Project Settings → Player → Allow
+  downloads over HTTP** for a local server, or use HTTPS.
+- Microphone capture isn't available in WebGL builds; use `Say()` with the browser's
+  speech recognition there.
+
+Import the **Voice Scene** sample (Package Manager → Samples) for a working hold-to-talk
+setup. Play Mode tests in `Tests/Runtime` run the whole loop against a local server
+(`scripts/run-voice-scene.sh`); add the package to your manifest's `testables` to run them.
+
 ## Why streaming actually streams
 
 `AskNpcStreaming` parses Server-Sent Events incrementally via a custom
@@ -121,10 +177,17 @@ dictionaries at all, so this package bundles a small, dependency-free JSON parse
 ## Requirements
 
 - Unity 2021.3 LTS or later
-- The `com.unity.modules.unitywebrequest` built-in module (included by default in most projects)
+- The `com.unity.modules.unitywebrequest`, `com.unity.modules.audio` and `com.unity.modules.animation` built-in modules (included by default in most projects)
 - TextMeshPro, only if you import the `BasicDialogue` sample
 
 ## Testing
+
+The voice code (`NpcSceneManager`, `WavUtility`, scene event parsing) compiles against
+Unity 6000.5.6f1's engine assemblies, and its logic was checked against a running server:
+speech encoded by `WavUtility` was transcribed correctly by the server, every scene event
+parsed, and the NPC voice clips decode. Play Mode tests that run the whole loop
+(`Tests/Runtime`, including an interruption + "go on" round trip) need a running server
+(`scripts/run-voice-scene.sh`) and an activated Unity Editor.
 
 This package's `MiniJson`/`NpcResponseParser` logic was verified by a batch-mode Unity
 Editor run (27 assertions covering escaped strings, unicode escapes, malformed JSON,
