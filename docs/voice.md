@@ -30,6 +30,13 @@ providers:
       timeout_seconds: 60
 ```
 
+For far more natural voices, use the `openai_speech` engine with the bundled local Kokoro
+server instead of Piper; see [scenes.md](scenes.md#giving-an-npc-its-own-voice).
+Optional Piper tuning (`volume`, `noise_scale`, `noise_w`, `length_scale`) and bare model
+file names resolved through `GAMERAG_VOICE_DIR` are covered in [scenes.md](scenes.md),
+which also documents multi-NPC voice conversations (`POST /scene/voice`) and the one-command
+local setup (`scripts/setup-local-voice.sh`).
+
 Both sub-sections are optional and independent — an NPC can have speech-to-text without
 text-to-speech, or vice versa. `POST /ask/voice` requires speech-to-text always, and
 requires text-to-speech only if `synthesizeReply` is requested.

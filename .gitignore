@@ -34,3 +34,7 @@ unreal-plugin/**/Binaries/
 unreal-plugin/**/Intermediate/
 unreal-plugin/**/*.VC.db
 unreal-plugin/**/*.VC.opendb
+
+# Local voice models + piper venv (scripts/setup-local-voice.sh)
+models/
+__pycache__/
