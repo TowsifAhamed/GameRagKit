@@ -31,5 +31,5 @@ providers:
     text_to_speech:
       # see docs/scenes.md#giving-an-npc-its-own-voice
       engine: openai_speech
-      voice: af_heart
+      voice: bf_emma
       speed: 1.0

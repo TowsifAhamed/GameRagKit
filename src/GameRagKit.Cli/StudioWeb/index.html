@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GameRagKit</title>
   <link rel="stylesheet" href="styles.css?v=3" />
-  <link rel="stylesheet" href="home.css?v=3" />
+  <link rel="stylesheet" href="home.css?v=4" />
 </head>
 <body class="home-body">
   <header id="app-header">
@@ -76,6 +76,59 @@
             <span class="demo-card-tag">3 NPCs &middot; local STT + TTS</span>
           </div>
         </a>
+      </div>
+    </section>
+
+    <section class="voices" id="voices">
+      <h3>Hear what a GPU would add</h3>
+      <p class="demos-sub">
+        The NPCs in these demos speak with <strong>Kokoro</strong>, a small open voice model
+        that runs on the CPU server hosting this site. The same lines below, generated with
+        two larger open models, carry real emotion: laughs, sighs, voices designed from a
+        one-line character description. They need a GPU to keep up in a live conversation,
+        and we can&rsquo;t afford to host one for this demo. On a gaming PC with a modern
+        GPU, GameRagKit can run them locally, and your NPCs would sound like this.
+      </p>
+
+      <div class="voice-table">
+        <div class="voice-row voice-head">
+          <div></div>
+          <div>Kokoro 82M <span class="voice-tag live">live in the demos &middot; CPU</span></div>
+          <div>Qwen3-TTS 1.7B <span class="voice-tag">needs a GPU</span></div>
+          <div>Chatterbox Turbo <span class="voice-tag">needs a GPU</span></div>
+        </div>
+          <div class="voice-row">
+            <div class="voice-who"><strong>Mira</strong> <span>tavern keeper</span><q>Oh, you should have seen his face! Bram swore up and down he&rsquo;d paid his tab, so I just held up the ledger. Ha!</q></div>
+            <div class="voice-cell" data-engine="Kokoro (live, CPU)"><audio controls preload="none" src="audio/voices/kokoro_mira.mp3"></audio></div>
+            <div class="voice-cell" data-engine="Qwen3-TTS (GPU)"><audio controls preload="none" src="audio/voices/qwen17-design_mira.mp3"></audio></div>
+            <div class="voice-cell" data-engine="Chatterbox (GPU)"><audio controls preload="none" src="audio/voices/chatterbox-turbo_mira.mp3"></audio></div>
+          </div>
+          <div class="voice-row">
+            <div class="voice-who"><strong>Bram</strong> <span>blacksmith</span><q>Busy? I&rsquo;ve three swords to finish before sundown, and she wants to squabble over a few coppers. Unbelievable.</q></div>
+            <div class="voice-cell" data-engine="Kokoro (live, CPU)"><audio controls preload="none" src="audio/voices/kokoro_bram.mp3"></audio></div>
+            <div class="voice-cell" data-engine="Qwen3-TTS (GPU)"><audio controls preload="none" src="audio/voices/qwen17-design_bram.mp3"></audio></div>
+            <div class="voice-cell" data-engine="Chatterbox (GPU)"><audio controls preload="none" src="audio/voices/chatterbox-turbo_bram.mp3"></audio></div>
+          </div>
+          <div class="voice-row">
+            <div class="voice-who"><strong>Oswin</strong> <span>town crier</span><q>Hear ye, hear ye! A royal messenger rode through Riverside last night, and he left something behind at the tavern!</q></div>
+            <div class="voice-cell" data-engine="Kokoro (live, CPU)"><audio controls preload="none" src="audio/voices/kokoro_oswin.mp3"></audio></div>
+            <div class="voice-cell" data-engine="Qwen3-TTS (GPU)"><audio controls preload="none" src="audio/voices/qwen17-design_oswin.mp3"></audio></div>
+            <div class="voice-cell" data-engine="Chatterbox (GPU)"><audio controls preload="none" src="audio/voices/chatterbox-turbo_oswin.mp3"></audio></div>
+          </div>
+      </div>
+      <p class="voices-note">All three are open models you can ship (Apache-2.0 / MIT).
+        Chatterbox clones the Qwen-designed voices and adds <code>[laugh]</code> and
+        <code>[sigh]</code>.</p>
+
+      <div class="support-callout" id="support">
+        <img src="images/support-qr.png" alt="RedotPay QR code" width="132" height="132" loading="lazy" />
+        <div>
+          <h4>Help us put a GPU behind these NPCs</h4>
+          <p>Hosting, LLM usage and every voice in these demos are paid out of pocket.
+            Contributions go straight to running them, and to a GPU server so everyone
+            visiting can hear the expressive voices above instead of the CPU ones.</p>
+          <p class="support-id">RedotPay ID: <strong>1236302071</strong></p>
+        </div>
       </div>
     </section>
   </main>

@@ -36,4 +36,4 @@ providers:
     text_to_speech:
       engine: openai_speech
       voice: bm_fable
-      speed: 0.92
+      speed: 0.9

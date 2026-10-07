@@ -17,6 +17,18 @@
     <div class="quest-hint">Mira, Bram and Oswin are arguing by the fire outside the tavern. Join in: talk to one of them by name, or to all of them at once. They'll answer each other too.</div>
   </div>
 
+  <div id="support-banner">
+    <span class="close-btn" id="support-banner-close">&times;</span>
+    These NPC voices run on a CPU; a GPU server would make them sound
+    <a href="../#voices">like this</a>. Hosting, LLM and voice costs are paid out of pocket.
+    If GameRagKit is useful to you, please support it via RedotPay (ID: 1236302071).
+  </div>
+  <script>
+    document.getElementById("support-banner-close").addEventListener("click", () => {
+      document.getElementById("support-banner").remove();
+    });
+  </script>
+
   <div id="interact-prompt" hidden></div>
 
   <div id="dialogue-panel" hidden>

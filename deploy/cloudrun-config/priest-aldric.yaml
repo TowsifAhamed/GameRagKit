@@ -32,4 +32,4 @@ providers:
       # see docs/scenes.md#giving-an-npc-its-own-voice
       engine: openai_speech
       voice: bm_fable
-      speed: 0.92
+      speed: 0.9

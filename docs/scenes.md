@@ -79,10 +79,12 @@ overrides every Piper NPC with one model, so leave it unset when you want distin
 
 The demo pages work on a deploy with no speech models at all: speech-to-text falls back to
 the browser's own recognition (Chrome, Edge, Safari) and replies to the browser's built-in
-voices. For natural NPC voices on a CPU-only host, run Kokoro as a second service from
-[`deploy/kokoro/Dockerfile`](../deploy/kokoro/Dockerfile) (about 1 GB RAM) and set
-`TTS_ENDPOINT` on the GameRagKit service to its private URL, e.g.
-`http://kokoro.railway.internal:8880`. The personas in `deploy/cloudrun-config` already
+voices. The hosted demo image ([`Dockerfile.cloudrun`](../Dockerfile.cloudrun)) bundles
+Kokoro and starts it next to Studio (see [`deploy/start.sh`](../deploy/start.sh)), so NPCs
+speak with natural voices out of the box (the container uses roughly 0.8 GB of RAM; set
+`KOKORO=0` to turn it off). To run Kokoro as its own service instead, build
+[`deploy/kokoro/Dockerfile`](../deploy/kokoro/Dockerfile) and set `TTS_ENDPOINT` on the
+GameRagKit service to its private URL, e.g. `http://kokoro.railway.internal:8880`. The personas in `deploy/cloudrun-config` already
 name their voices. Qwen3-TTS and Chatterbox sound more expressive but need a GPU (or an
 Apple Silicon Mac) to keep up in real time.
 

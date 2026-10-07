@@ -35,5 +35,5 @@ providers:
     # Piper CLI engine instead: engine: piper + voice_model_path: <voice>.onnx
     text_to_speech:
       engine: openai_speech
-      voice: af_heart
+      voice: bf_emma
       speed: 1.0
