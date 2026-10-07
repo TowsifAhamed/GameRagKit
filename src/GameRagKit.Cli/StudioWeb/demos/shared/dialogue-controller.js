@@ -8,6 +8,8 @@
   "use strict";
 
   const HISTORY_LIMIT = 16;
+  // The NPC keeps what it never got to say for this many of its later lines.
+  const UNSAID_TURNS = 2;
 
   function attachDialogueController(game, options) {
     const voice = GameRagDemo.createVoice(game, { serverUrl: (options && options.serverUrl) || "" });
@@ -28,7 +30,9 @@
 
     let activeNpc = null;
     let dialogueOpen = false;
-    let transcript = []; // [{ role: "player" | "npc", text }] for the CURRENT conversation
+    let transcript = []; // [{ role: "player" | "npc", text, interrupted? }] for the CURRENT conversation
+    let unsaid = null;   // { text, turnsLeft }: what the NPC was cut off before saying
+    let speaking = null; // { entry, lineEl } for the reply being voiced right now
     let caps = { serverStt: false, canListen: false, serverTts: new Set() };
     let currentRequest = null;
 
@@ -78,6 +82,7 @@
       dialogueOpen = true;
       game.setDialogueOpen(true);
       transcript = [{ role: "npc", text: npc.greeting }];
+      unsaid = null;
       interactPrompt.hidden = true;
       dialoguePanel.hidden = false;
       dialogueNpcName.textContent = npc.label;
@@ -95,9 +100,30 @@
       dialogueInput.blur();
     }
 
+    // Stops the NPC mid-sentence (player barged in, or left). Its transcript entry keeps
+    // only the words actually heard; the rest is remembered as unsaid for later.
+    function interrupt() {
+      const cut = voice.stopAll();
+      const current = speaking;
+      speaking = null;
+      if (!current) return;
+      const { said, unsaid: left } = cut || { said: "", unsaid: current.entry.text };
+      if (said) {
+        current.entry.text = said;
+        current.entry.interrupted = true;
+        current.lineEl.textContent = `${said} —`;
+        current.lineEl.classList.add("cut-off");
+        current.lineEl.title = `Cut off. Didn't get to say: "${left}"`;
+      } else {
+        transcript.splice(transcript.indexOf(current.entry), 1);
+        current.lineEl.remove();
+      }
+      if (left) unsaid = { text: unsaid ? `${unsaid.text} ${left}`.slice(-400) : left, turnsLeft: UNSAID_TURNS };
+    }
+
     function closeDialogue() {
       if (currentRequest) currentRequest.abort();
-      voice.stopAll();
+      interrupt();
       if (ptt) ptt.stop();
       dialogueOpen = false;
       game.setDialogueOpen(false);
@@ -120,20 +146,26 @@
 
     // Speaks a line: the server clip when there is one, else the browser voice. Actors
     // (addNpc NPCs with a model) gesture and move their head while talking.
-    async function speak(npc, text, wavBase64, meta) {
+    async function speak(npc, text, wavBase64, meta, lineEl, entry) {
       const actor = npc.group ? npc : null;
+      speaking = { entry, lineEl };
       if (actor) {
         const gesture = voice.chooseGesture(Object.assign({ text }, meta || {}), npc.signatureGesture);
         if (gesture) game.playGesture(actor, gesture);
       }
       try {
         if (wavBase64) {
-          await voice.playWav(wavBase64, { position: actor ? actor.group.position : null, npc: actor });
+          await voice.playWav(wavBase64, { position: actor ? actor.group.position : null, npc: actor, text });
         } else {
           await voice.speakBrowser(text, GameRagDemo.voiceIndexFor(npc.npcId), actor);
         }
       } catch (err) {
         console.warn("[dialogue] playback failed", err);
+      }
+      // Finished without being cut off: it had its chance to say what it held back.
+      if (speaking && speaking.entry === entry) {
+        speaking = null;
+        if (unsaid && --unsaid.turnsLeft <= 0) unsaid = null;
       }
     }
 
@@ -143,13 +175,13 @@
       const npc = activeNpc;
       if (!npc) return;
       if (currentRequest) currentRequest.abort();
-      voice.stopAll();
+      interrupt();
       const controller = new AbortController();
       currentRequest = controller;
 
       const withVoice = !!(voiceToggle && voiceToggle.checked);
       const serverVoice = withVoice && caps.serverTts.has(npc.npcId);
-      const history = transcript.slice(-HISTORY_LIMIT).map((t) => ({ speaker: t.role === "player" ? "player" : npc.npcId, text: t.text }));
+      const history = transcript.slice(-HISTORY_LIMIT).map((t) => ({ speaker: t.role === "player" ? "player" : npc.npcId, text: t.text, interrupted: t.interrupted || undefined }));
       // An archetype NPC (many crowd figures sharing one backend agent) can otherwise give
       // itself a different name each turn; quoting its last reply back and forbidding a
       // new name keeps it consistent (soft phrasing wasn't followed by small models).
@@ -159,6 +191,7 @@
         maxResponders: 1,
         maxReactions: 0,
         synthesizeReply: serverVoice,
+        unsaid: unsaid ? [{ speaker: npc.npcId, text: unsaid.text }] : undefined,
         options: lastNpcLine
           ? { systemOverride: `You already told the player this in your last reply: "${lastNpcLine.text}". You MUST stay consistent with that -- if it named you, use that exact same name again if asked; do not pick a different name or contradict what you already said.` }
           : undefined
@@ -187,8 +220,11 @@
             } else if (event.type === "turn") {
               voice.setThinking(npc, false);
               reply = { text: event.text, mood: event.mood && event.mood.value, actions: event.actions };
-              addLine("npc", event.text);
-              transcript.push({ role: "npc", text: event.text });
+              // Voice mode: shown and remembered when spoken (see below), like subtitles.
+              if (!withVoice) {
+                addLine("npc", event.text);
+                transcript.push({ role: "npc", text: event.text });
+              }
             } else if (event.type === "audio") {
               clip = event.wavBase64 || null;
             } else if (event.type === "error") {
@@ -209,7 +245,10 @@
       }
       if (withVoice) {
         setStatus(`${npc.label} is speaking…`);
-        await speak(npc, reply.text, clip, reply);
+        const entry = { role: "npc", text: reply.text };
+        transcript.push(entry);
+        const lineEl = addLine("npc", reply.text);
+        await speak(npc, reply.text, clip, reply, lineEl, entry);
       } else if (npc.group) {
         const gesture = voice.chooseGesture(reply, npc.signatureGesture);
         if (gesture) game.playGesture(npc, gesture);
@@ -223,7 +262,7 @@
           getMode: () => (caps.serverStt ? "server" : "browser"),
           onStart: () => {
             if (currentRequest) currentRequest.abort();
-            voice.stopAll();
+            interrupt();
           },
           onStatus: setStatus,
           onError: (message) => { setStatus(""); addLine("system", message); },

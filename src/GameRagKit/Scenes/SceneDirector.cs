@@ -17,6 +17,12 @@ namespace GameRagKit.Scenes;
 /// </summary>
 public sealed class SceneDirector
 {
+    // "go on", "sorry, carry on", "you were saying?" -- hand the floor back to whoever the
+    // player just cut off.
+    private static readonly Regex Continuation = new(
+        @"\b(go on|go ahead|carry on|continue|keep going|you were saying|finish (what|your)|what were you (saying|going to say)|sorry,? (i )?interrupted)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly Regex GroupAddress = new(
         @"\b(every(one|body)|all of you|you all|y'?all|both of you|you (two|three|guys)|guys|folks|each of you)\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -105,7 +111,9 @@ public sealed class SceneDirector
                 : $"{NameOf(participants, prompt.Speaker)} just said to the group: \"{prompt.Text}\"";
             var askOptions = options.AskOptions with
             {
-                SystemOverride = Join(options.AskOptions.SystemOverride, BuildSceneInstructions(participant, participants, transcript))
+                SystemOverride = Join(
+                    options.AskOptions.SystemOverride,
+                    BuildSceneInstructions(participant, participants, transcript, options.Unsaid, continuing: method == "continue-interrupted" && reason == "routed"))
             };
 
             var reply = await participant.Agent.AskAsync(question, askOptions, cancellationToken).ConfigureAwait(false);
@@ -197,6 +205,15 @@ public sealed class SceneDirector
             return (addressed.Take(maxResponders).ToList(), "addressed-by-name");
         }
 
+        if (Continuation.IsMatch(playerLine))
+        {
+            var cutOff = FindInterrupted(participants, history, options.Unsaid);
+            if (cutOff != null)
+            {
+                return (new[] { cutOff }, "continue-interrupted");
+            }
+        }
+
         if (GroupAddress.IsMatch(playerLine))
         {
             return (participants.Take(maxResponders).ToList(), "addressed-group");
@@ -225,6 +242,15 @@ public sealed class SceneDirector
         return (new[] { fallback ?? participants[0] }, "last-speaker");
     }
 
+    // The participant most recently cut off: the last interrupted line in the history,
+    // else anyone still holding unsaid words.
+    private static SceneParticipant? FindInterrupted(IReadOnlyList<SceneParticipant> participants, IReadOnlyList<SceneLine> history, IReadOnlyDictionary<string, string> unsaid)
+    {
+        var lastCut = history.LastOrDefault(line => line.Interrupted && !line.IsPlayer);
+        var id = lastCut?.Speaker ?? unsaid.Keys.FirstOrDefault();
+        return id == null ? null : participants.FirstOrDefault(p => string.Equals(p.NpcId, id, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static async Task<IReadOnlyList<SceneParticipant>> RouteWithLlmAsync(
         IReadOnlyList<SceneParticipant> participants,
         string playerLine,
@@ -251,7 +277,7 @@ public sealed class SceneDirector
             user.AppendLine("Recent conversation:");
             foreach (var line in recent)
             {
-                user.AppendLine($"{NameOf(participants, line.Speaker)}: {line.Text}");
+                user.AppendLine(FormatLine(participants, line));
             }
         }
 
@@ -369,7 +395,12 @@ public sealed class SceneDirector
             .Select(x => x.Participant);
     }
 
-    private static string BuildSceneInstructions(SceneParticipant self, IReadOnlyList<SceneParticipant> participants, IReadOnlyList<SceneLine> transcript)
+    internal static string BuildSceneInstructions(
+        SceneParticipant self,
+        IReadOnlyList<SceneParticipant> participants,
+        IReadOnlyList<SceneLine> transcript,
+        IReadOnlyDictionary<string, string>? unsaid = null,
+        bool continuing = false)
     {
         var others = participants.Where(p => p.NpcId != self.NpcId).Select(p => p.DisplayName).ToList();
         var builder = new StringBuilder();
@@ -379,7 +410,17 @@ public sealed class SceneDirector
         builder.AppendLine("Conversation so far:");
         foreach (var line in transcript.TakeLast(10))
         {
-            builder.AppendLine($"{NameOf(participants, line.Speaker)}: {line.Text}");
+            builder.AppendLine(FormatLine(participants, line));
+        }
+
+        // What this NPC meant to say but never got out, because the player talked over it.
+        if (unsaid != null && unsaid.TryGetValue(self.NpcId, out var leftOver) && !string.IsNullOrWhiteSpace(leftOver))
+        {
+            builder.AppendLine($"Earlier you were cut off before you could say: \"{leftOver.Trim()}\"");
+            builder.AppendLine(continuing
+                // The player explicitly gave the floor back: small models need this spelled out.
+                ? "The player just asked you to go on. Pick up exactly where you were cut off and say the rest of it now, in your own words, starting with something like \"As I was saying,\". Do not say you have nothing more to add."
+                : "Respond to what was just said first. If those unsaid words are relevant to it, work them in naturally in your own words (\"as I was saying...\"), without repeating them verbatim; if they no longer fit, let them go.");
         }
 
         builder.AppendLine($"Reply ONLY as {self.DisplayName}, in one to three short sentences meant to be spoken aloud.");
@@ -447,6 +488,10 @@ public sealed class SceneDirector
         return summary.Length > 220 ? summary[..220] : summary;
     }
 
+    // A cut-off line is marked so everyone (including its speaker) knows it was never finished.
+    private static string FormatLine(IReadOnlyList<SceneParticipant> participants, SceneLine line)
+        => $"{NameOf(participants, line.Speaker)}: {line.Text}{(line.Interrupted ? " — (cut off mid-sentence)" : string.Empty)}";
+
     private static string NameOf(IReadOnlyList<SceneParticipant> participants, string speaker)
     {
         if (string.Equals(speaker, SceneLine.PlayerSpeaker, StringComparison.OrdinalIgnoreCase))
@@ -467,7 +512,8 @@ public sealed record SceneParticipant(string NpcId, string DisplayName, NpcAgent
     public string ShortName { get; } = DisplayName.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? DisplayName;
 }
 
-public sealed record SceneLine(string Speaker, string Text)
+/// <param name="Interrupted">The speaker was talked over and never finished; Text is only what was actually heard.</param>
+public sealed record SceneLine(string Speaker, string Text, bool Interrupted = false)
 {
     public const string PlayerSpeaker = "player";
 
@@ -487,6 +533,12 @@ public sealed record SceneOptions
     public bool UseLlmRouter { get; init; } = true;
 
     public bool SynthesizeSpeech { get; init; }
+
+    /// <summary>
+    /// Per NPC id, words that NPC meant to say but was interrupted before saying (the rest of
+    /// a cut-off line, or lines that never got played). Each NPC is told about its own.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Unsaid { get; init; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }
 
 public abstract record SceneEvent

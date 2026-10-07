@@ -9,6 +9,9 @@
   "use strict";
 
   const HISTORY_LIMIT = 20;
+  const UNSAID_MAX_CHARS = 400;
+  // An NPC keeps its unsaid words for this many of its own later lines, then lets them go.
+  const UNSAID_TURNS = 2;
 
   function attachSceneController(game, config) {
     const voice = GameRagDemo.createVoice(game, { serverUrl: config.serverUrl || "" });
@@ -29,7 +32,8 @@
 
     const isTouch = document.body.classList.contains("touch-mode");
     let open = false;
-    let history = [];
+    let history = [];       // what was actually said: [{ speaker, text, interrupted? }]
+    const unsaid = new Map(); // npcId -> { text, turnsLeft }: what an NPC never got to say
     let caps = { serverStt: false, browserStt: false, canListen: false, serverTts: new Set() };
     let currentRequest = null; // AbortController for the in-flight scene request
 
@@ -115,11 +119,56 @@
     }
 
     function stopPlayback() {
-      if (beat) beat.cancelled = true;
-      voice.stopAll();
+      const cut = voice.stopAll();
+      if (beat && !beat.cancelled) {
+        beat.cancelled = true;
+        if (beat.withVoice) settleInterruptedBeat(beat, cut);
+      }
       for (const id of rings.keys()) setNpcState(id, "idle");
       speakerId = null;
       addresseeId = null;
+    }
+
+    // The player cut in. The line being voiced keeps only the words actually heard (marked
+    // as interrupted); its remainder and every queued line that never played become that
+    // NPC's unsaid words, which it's reminded of on its next turns.
+    function settleInterruptedBeat(b, cut) {
+      const pending = [...b.turns.keys()].filter((i) => i >= b.next).sort((x, y) => x - y);
+      for (const index of pending) {
+        const turn = b.turns.get(index);
+        const wasPlaying = index === b.next && b.playing && cut && cut.npc === byId.get(turn.npc).npc;
+        const { said, unsaid: left } = wasPlaying ? cut : { said: "", unsaid: turn.text };
+        if (said) {
+          remember(turn.npc, said, true);
+          turn.lineEl.lastChild.textContent = `${said} —`;
+          turn.lineEl.classList.add("cut-off");
+          turn.lineEl.title = `Cut off. Didn't get to say: "${left}"`;
+        } else {
+          turn.lineEl.remove();
+          turn.extraEls.forEach((el) => el.remove());
+        }
+        if (left) addUnsaid(turn.npc, left);
+      }
+    }
+
+    function addUnsaid(npcId, text) {
+      const existing = unsaid.get(npcId);
+      const combined = existing ? `${existing.text} ${text}` : text;
+      unsaid.set(npcId, { text: combined.slice(-UNSAID_MAX_CHARS), turnsLeft: UNSAID_TURNS });
+    }
+
+    // A line the NPC finished: it had its chance to bring up what it was holding back.
+    function spokeInFull(npcId) {
+      const entry = unsaid.get(npcId);
+      if (entry && --entry.turnsLeft <= 0) unsaid.delete(npcId);
+    }
+
+    // In voice mode a line (and its game actions) appears when the NPC starts saying it,
+    // like subtitles, so nothing shows up that was never spoken.
+    function reveal(turn) {
+      turn.lineEl.hidden = false;
+      turn.extraEls.forEach((el) => { el.hidden = false; });
+      log.scrollTop = log.scrollHeight;
     }
 
     async function pump(b) {
@@ -139,6 +188,7 @@
       const gesture = voice.chooseGesture(turn, member.signatureGesture);
       if (gesture) game.playGesture(member.npc, gesture);
       setNpcState(turn.npc, "speaking");
+      reveal(turn);
       turn.lineEl.classList.add("speaking");
       setStatus(`${member.name} is speaking…`);
       try {
@@ -148,7 +198,7 @@
           await sleep(Math.min(4000, 600 + turn.text.length * 25));
           voice.setSpeaking(member.npc, null);
         } else if (clip && clip.wav) {
-          await voice.playWav(clip.wav, { position: member.npc.group.position, npc: member.npc });
+          await voice.playWav(clip.wav, { position: member.npc.group.position, npc: member.npc, text: turn.text });
         } else {
           await voice.speakBrowser(turn.text, members.indexOf(member), member.npc);
         }
@@ -161,6 +211,10 @@
         }
         setNpcState(turn.npc, "idle");
         turn.lineEl.classList.remove("speaking");
+        if (b.withVoice && !b.cancelled) {
+          remember(turn.npc, turn.text);
+          spokeInFull(turn.npc);
+        }
         b.playing = false;
         b.next++;
         if (!b.cancelled) pump(b);
@@ -195,8 +249,8 @@
       return line;
     }
 
-    function remember(speaker, text) {
-      history.push({ speaker, text });
+    function remember(speaker, text, interrupted) {
+      history.push(interrupted ? { speaker, text, interrupted: true } : { speaker, text });
       if (history.length > HISTORY_LIMIT) history = history.slice(-HISTORY_LIMIT);
     }
 
@@ -234,6 +288,7 @@
       panel.hidden = false;
       log.innerHTML = "";
       history = [];
+      unsaid.clear();
       routingEl.textContent = "";
       voice.ensureAudio();
       if (config.openingLine) {
@@ -330,7 +385,13 @@
       // Server audio only if at least one NPC has a server voice; the rest (and every NPC
       // on a server with none) fall back to browser speech per turn.
       const serverVoices = withVoice && caps.serverTts.size > 0;
-      const settings = { history, maxResponders: 2, maxReactions: 1, synthesizeReply: serverVoices };
+      const settings = {
+        history,
+        unsaid: [...unsaid].map(([speaker, entry]) => ({ speaker, text: entry.text })),
+        maxResponders: 2,
+        maxReactions: 1,
+        synthesizeReply: serverVoices
+      };
       if (text) {
         remember("player", text);
         setStatus("…");
@@ -384,12 +445,17 @@
             mood.textContent = event.mood.value;
             lineEl.firstChild.after(mood);
           }
-          for (const action of event.actions || []) {
+          const extraEls = (event.actions || []).map((action) => {
             const args = Object.entries(action.args || {}).map(([k, v]) => `${k}: ${v}`).join(", ");
-            addLine("action", `${nameOf(event.npc)} → ${action.name}${args ? ` (${args})` : ""}`);
+            return addLine("action", `${nameOf(event.npc)} → ${action.name}${args ? ` (${args})` : ""}`);
+          });
+          if (b.withVoice) {
+            lineEl.hidden = true;
+            extraEls.forEach((el) => { el.hidden = true; });
+          } else {
+            remember(event.npc, event.text);
           }
-          remember(event.npc, event.text);
-          b.turns.set(event.index, { npc: event.npc, text: event.text, lineEl, mood: event.mood && event.mood.value, actions: event.actions });
+          b.turns.set(event.index, { npc: event.npc, text: event.text, lineEl, extraEls, mood: event.mood && event.mood.value, actions: event.actions });
           if (rings.get(event.npc).state === "thinking") setNpcState(event.npc, "idle");
           if (b.withVoice && !serverVoices) b.clips.set(event.index, { wav: null });
           pump(b);

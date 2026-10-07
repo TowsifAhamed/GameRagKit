@@ -102,7 +102,8 @@ reply while later NPCs are still thinking. Send the `X-GameRAG-Protocol: 1` head
   ],
   "message": "Mira, does Bram owe you money?",
   "history": [ { "speaker": "player", "text": "Evening all." },
-               { "speaker": "blacksmith-bram", "text": "Evening." } ],
+               { "speaker": "blacksmith-bram", "text": "Evening. Funny you", "interrupted": true } ],
+  "unsaid": [ { "speaker": "blacksmith-bram", "text": "mention the gate, the guard was asking about you." } ],
   "maxResponders": 2,
   "maxReactions": 1,
   "useLlmRouter": true,
@@ -115,6 +116,16 @@ reply while later NPCs are still thinking. Send the `X-GameRAG-Protocol: 1` head
 from "Mira, Tavern Keeper") also counts. `history` is the client's transcript of the scene
 so far (`speaker` is `"player"` or an NPC id); the server keeps no per-scene state.
 `options` takes the same shape as `/ask`'s and applies to every NPC. Up to 6 participants.
+
+**Interruptions.** When the player talks over an NPC, send only the words that were actually
+heard, with `"interrupted": true`, and put the rest (plus any queued lines that never played)
+in `unsaid`, keyed by NPC id. Every NPC sees the cut-off line marked as unfinished, and the
+interrupted NPC is reminded of what it didn't get to say, so it can work it in later in its
+own words instead of repeating itself or forgetting it. If the player says "go on",
+"carry on" or "you were saying?", the router hands the floor back to whoever was cut off
+(`method: "continue-interrupted"`), and that NPC is told to finish its point. The demo pages
+track this from playback position, and drop an NPC's unsaid words after two more of its
+uninterrupted lines.
 
 ### `POST /scene/voice` (multipart)
 
@@ -137,7 +148,7 @@ decide whether to show a mic and whether to expect server audio.
 | `type` | Fields | Meaning |
 |---|---|---|
 | `transcript` | `text` | (voice only) what the player said |
-| `routing` | `responders`, `method` | who will answer and why (`addressed-by-name`, `addressed-group`, `llm-router`, `last-speaker`, `only-participant`) |
+| `routing` | `responders`, `method` | who will answer and why (`addressed-by-name`, `continue-interrupted`, `addressed-group`, `llm-router`, `last-speaker`, `only-participant`) |
 | `thinking` | `npc` | an NPC started generating |
 | `turn` | `index`, `npc`, `reason`, `text`, `actions`, `mood`, `sources`, `fromCloud` | one spoken line; `reason` is `routed` or `reaction` |
 | `audio` | `index`, `npc`, `wavBase64`, `error` | that turn's speech (may arrive after later turns; play by `index`). `wavBase64` is null with an `error` when it couldn't be voiced |
@@ -153,7 +164,7 @@ clients can queue playback by index without timeouts.
   WebAudio `PannerNode` with `equalpower` panning; HRTF made small-model TTS voices sound
   phasey.
 - **Barge-in**: abort the in-flight request and stop playback when the player starts
-  talking again.
+  talking again, then report what was heard vs. left unsaid (see **Interruptions** above).
 - **Latency**: lines are generated one after another so each NPC hears the previous one.
   With a local 3B model, expect a few seconds per line; synthesis overlaps with the next
   NPC's generation. Lower `maxResponders`/`maxReactions` for snappier beats.

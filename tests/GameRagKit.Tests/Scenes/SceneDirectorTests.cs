@@ -87,4 +87,74 @@ public sealed class SceneDirectorTests
 
         SceneDirector.CleanSpokenText(raw, Mira, Everyone).Should().Be("Ask Bram about the gate.");
     }
+
+    [Fact]
+    public void BuildSceneInstructions_Marks_Cut_Off_Lines_And_Reminds_The_Speaker_Of_Unsaid_Words()
+    {
+        var transcript = new[]
+        {
+            new SceneLine(SceneLine.PlayerSpeaker, "What happened at the gate?"),
+            new SceneLine("blacksmith-bram", "Well, the guard told me the messenger", Interrupted: true),
+            new SceneLine(SceneLine.PlayerSpeaker, "Mira, is that true?")
+        };
+        var unsaid = new Dictionary<string, string> { ["blacksmith-bram"] = "left a sealed letter with Mira." };
+
+        var forBram = SceneDirector.BuildSceneInstructions(Bram, Everyone, transcript, unsaid);
+        var forMira = SceneDirector.BuildSceneInstructions(Mira, Everyone, transcript, unsaid);
+
+        forBram.Should().Contain("Bram: Well, the guard told me the messenger — (cut off mid-sentence)");
+        forBram.Should().Contain("cut off before you could say: \"left a sealed letter with Mira.\"");
+        // Only the NPC who was cut off is told what it didn't get to say.
+        forMira.Should().Contain("(cut off mid-sentence)");
+        forMira.Should().NotContain("sealed letter");
+    }
+
+    [Fact]
+    public void BuildSceneInstructions_Tells_A_Resumed_Speaker_To_Finish_Its_Point()
+    {
+        var unsaid = new Dictionary<string, string> { ["blacksmith-bram"] = "left a sealed letter with Mira." };
+
+        var resumed = SceneDirector.BuildSceneInstructions(Bram, Everyone, Array.Empty<SceneLine>(), unsaid, continuing: true);
+        var ordinary = SceneDirector.BuildSceneInstructions(Bram, Everyone, Array.Empty<SceneLine>(), unsaid);
+
+        resumed.Should().Contain("Pick up exactly where you were cut off");
+        ordinary.Should().Contain("Respond to what was just said first");
+    }
+
+    [Theory]
+    [InlineData("Sorry, go on.")]
+    [InlineData("You were saying?")]
+    [InlineData("Carry on, I'm listening")]
+    public async Task PickResponders_Hands_The_Floor_Back_To_Whoever_Was_Cut_Off(string line)
+    {
+        var history = new[]
+        {
+            new SceneLine("tavern-keeper-mira", "Ale's fresh tonight."),
+            new SceneLine("blacksmith-bram", "Funny you mention the gate, because", Interrupted: true),
+            new SceneLine(SceneLine.PlayerSpeaker, "Wait, wait.")
+        };
+
+        var (responders, method) = await new SceneDirector().PickRespondersAsync(
+            Everyone, line, history, new SceneOptions { UseLlmRouter = false }, CancellationToken.None);
+
+        method.Should().Be("continue-interrupted");
+        responders.Select(p => p.NpcId).Should().Equal("blacksmith-bram");
+    }
+
+    [Fact]
+    public async Task PickResponders_Uses_Unsaid_When_No_Line_Was_Cut_Mid_Sentence()
+    {
+        // Mira's whole line was queued but never played, so it's only in Unsaid.
+        var options = new SceneOptions
+        {
+            UseLlmRouter = false,
+            Unsaid = new Dictionary<string, string> { ["tavern-keeper-mira"] = "I saw the messenger leave at dawn." }
+        };
+
+        var (responders, method) = await new SceneDirector().PickRespondersAsync(
+            Everyone, "Go ahead.", Array.Empty<SceneLine>(), options, CancellationToken.None);
+
+        method.Should().Be("continue-interrupted");
+        responders.Select(p => p.NpcId).Should().Equal("tavern-keeper-mira");
+    }
 }

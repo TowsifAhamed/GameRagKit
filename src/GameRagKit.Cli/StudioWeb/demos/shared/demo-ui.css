@@ -459,3 +459,9 @@ body.dialogue-open #support-banner {
   from { transform: translateY(16px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
+
+/* A line the player talked over: only the heard part stays (hover shows what was left). */
+.dialogue-line.cut-off {
+  opacity: 0.75;
+  cursor: help;
+}

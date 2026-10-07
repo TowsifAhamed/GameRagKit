@@ -17,6 +17,9 @@
     const serverUrl = (options && options.serverUrl) || "";
     let audioCtx = null;
     const activeSources = new Set();
+    // The line being voiced right now, so an interruption can tell how much of it was
+    // actually heard: { npc, text, spokenChars() }.
+    let activePlayback = null;
 
     function ensureAudio() {
       if (!audioCtx) {
@@ -241,7 +244,7 @@
 
     // Plays a base64 WAV, positioned at `position` ({x, z}) if given. Resolves when done
     // or stopped. `npc` (an addNpc actor) gets talking motion driven by the audio level.
-    async function playWav(base64, { position, npc } = {}) {
+    async function playWav(base64, { position, npc, text } = {}) {
       const ctx = ensureAudio();
       const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const buffer = await ctx.decodeAudioData(bytes.buffer);
@@ -274,13 +277,19 @@
 
       activeSources.add(source);
       if (npc) setSpeaking(npc, analyser);
+      const playback = { npc, text: text || "", spokenChars: () => 0 };
       try {
         await new Promise((resolve) => {
           source.onended = resolve;
           source.start();
+          const startedAt = ctx.currentTime;
+          // Time-proportional estimate of how far into the text the voice has got.
+          playback.spokenChars = () => Math.round(playback.text.length * Math.min(1, (ctx.currentTime - startedAt) / buffer.duration));
+          activePlayback = playback;
         });
       } finally {
         activeSources.delete(source);
+        if (activePlayback === playback) activePlayback = null;
         if (npc) setSpeaking(npc, null);
       }
     }
@@ -331,15 +340,37 @@
         if (voices.length) utterance.voice = voices[voiceIndex % voices.length];
         utterance.pitch = gender === "male" ? [0.85, 0.75, 0.95][voiceIndex % 3] : gender === "female" ? [1.1, 1.0, 1.2][voiceIndex % 3] : [1.15, 0.8, 1.0, 1.3, 0.9][voiceIndex % 5];
         utterance.rate = 1.02;
-        const done = () => { if (npc) setSpeaking(npc, null); resolve(); };
-        utterance.onstart = () => { if (npc) setSpeaking(npc, "synthetic"); };
+        // Word boundaries give the exact position where the browser reports them; network
+        // voices (Chrome's "Google ...") often don't, so fall back to elapsed time.
+        let boundary = -1;
+        let startedAt = 0;
+        const playback = {
+          npc,
+          text,
+          spokenChars: () => (boundary >= 0 ? boundary : Math.round(((performance.now() - startedAt) / 1000) * 14 * utterance.rate))
+        };
+        utterance.onboundary = (event) => { if (event.name !== "sentence") boundary = event.charIndex; };
+        const done = () => {
+          if (activePlayback === playback) activePlayback = null;
+          if (npc) setSpeaking(npc, null);
+          resolve();
+        };
+        utterance.onstart = () => {
+          startedAt = performance.now();
+          activePlayback = playback;
+          if (npc) setSpeaking(npc, "synthetic");
+        };
         utterance.onend = done;
         utterance.onerror = done;
         speechSynthesis.speak(utterance);
       });
     }
 
+    // Stops all NPC speech. Returns what the interrupted line got through, if a line was
+    // mid-playback: { npc, text, said, unsaid } (said/unsaid split on a word boundary).
     function stopAll() {
+      const cut = activePlayback ? Object.assign({ npc: activePlayback.npc, text: activePlayback.text }, splitSpoken(activePlayback.text, activePlayback.spokenChars())) : null;
+      activePlayback = null;
       for (const source of activeSources) {
         try { source.stop(); } catch (_) { /* already stopped */ }
       }
@@ -349,6 +380,7 @@
         state.source = null;
         state.thinking = false;
       }
+      return cut;
     }
 
     // ---------- Body language ----------
@@ -463,6 +495,17 @@
     };
   }
 
+  // Splits a line at roughly `chars` into what was heard and what wasn't, on a word
+  // boundary; the word being spoken when it was cut off counts as unsaid.
+  function splitSpoken(text, chars) {
+    const t = String(text || "");
+    if (chars >= t.length - 2) return { said: t.trim(), unsaid: "" };
+    if (chars <= 0) return { said: "", unsaid: t.trim() };
+    const cut = t.lastIndexOf(" ", chars);
+    if (cut <= 0) return { said: "", unsaid: t.trim() };
+    return { said: t.slice(0, cut).trim(), unsaid: t.slice(cut).trim() };
+  }
+
   // Short form of a label for addressing someone: "Mira, Tavern Keeper" -> "Mira".
   function shortName(label) {
     return String(label || "").split(/[ ,]/).filter(Boolean)[0] || label;
@@ -478,5 +521,6 @@
   global.GameRagDemo = global.GameRagDemo || {};
   global.GameRagDemo.createVoice = createVoice;
   global.GameRagDemo.shortName = shortName;
+  global.GameRagDemo.splitSpoken = splitSpoken;
   global.GameRagDemo.voiceIndexFor = voiceIndexFor;
 })(window);

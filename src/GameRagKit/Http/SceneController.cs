@@ -16,6 +16,7 @@ namespace GameRagKit.Http;
 public sealed class SceneController : ControllerBase
 {
     private const int MaxParticipants = 6;
+    private const int MaxUnsaidChars = 500;
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private readonly AgentRegistry _registry;
     private readonly SceneDirector _director = new();
@@ -166,8 +167,18 @@ public sealed class SceneController : ControllerBase
         var history = (request.History ?? Array.Empty<SceneLinePayload>())
             .Where(line => !string.IsNullOrWhiteSpace(line.Speaker) && !string.IsNullOrWhiteSpace(line.Text))
             .TakeLast(20)
-            .Select(line => new SceneLine(line.Speaker!, line.Text!))
+            .Select(line => new SceneLine(line.Speaker!, line.Text!, line.Interrupted ?? false))
             .ToList();
+
+        var unsaid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in request.Unsaid ?? Array.Empty<SceneLinePayload>())
+        {
+            if (!string.IsNullOrWhiteSpace(line.Speaker) && !string.IsNullOrWhiteSpace(line.Text))
+            {
+                var text = line.Text!.Trim();
+                unsaid[line.Speaker!] = text.Length > MaxUnsaidChars ? text[^MaxUnsaidChars..] : text;
+            }
+        }
 
         var options = new SceneOptions
         {
@@ -175,7 +186,8 @@ public sealed class SceneController : ControllerBase
             MaxResponders = Math.Clamp(request.MaxResponders ?? 2, 1, MaxParticipants),
             MaxReactions = Math.Clamp(request.MaxReactions ?? 1, 0, 3),
             UseLlmRouter = request.UseLlmRouter ?? true,
-            SynthesizeSpeech = request.SynthesizeReply ?? false
+            SynthesizeSpeech = request.SynthesizeReply ?? false,
+            Unsaid = unsaid
         };
 
         try
@@ -295,6 +307,9 @@ public sealed record SceneHttpRequest
     public SceneParticipantPayload[]? Participants { get; init; }
     public string? Message { get; init; }
     public SceneLinePayload[]? History { get; init; }
+
+    /// <summary>Per NPC (speaker = NPC id): what it was interrupted before saying.</summary>
+    public SceneLinePayload[]? Unsaid { get; init; }
     public AskOptionsPayload? Options { get; init; }
     public int? MaxResponders { get; init; }
     public int? MaxReactions { get; init; }
@@ -304,4 +319,4 @@ public sealed record SceneHttpRequest
 
 public sealed record SceneParticipantPayload(string Npc, string? Name);
 
-public sealed record SceneLinePayload(string? Speaker, string? Text);
+public sealed record SceneLinePayload(string? Speaker, string? Text, bool? Interrupted = null);
