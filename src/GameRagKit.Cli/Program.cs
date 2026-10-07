@@ -175,17 +175,16 @@ packCommand.SetHandler(async (DirectoryInfo configDir, FileInfo? output) =>
     Console.WriteLine($"Pack written to {destination.FullName}");
 }, packConfigArgument, packOutputOption);
 
-var studioConfigOption = new Option<DirectoryInfo>("--config", description: "Directory containing NPC YAML configs")
-{ IsRequired = true };
+var studioConfigOption = new Option<DirectoryInfo?>("--config", description: "Directory containing NPC YAML configs (optional; the bundled demo NPCs always load)");
 var studioPortOption = new Option<int>("--port", () => 5290, "Port to listen on");
 var studioCommand = new Command("studio", "Launch a local web UI for editing NPC personas and testing chat")
 {
     studioConfigOption,
     studioPortOption
 };
-studioCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
+studioCommand.SetHandler(async (DirectoryInfo? configDir, int port) =>
 {
-    if (!configDir.Exists)
+    if (configDir is { Exists: false })
     {
         Console.Error.WriteLine($"Config directory not found: {configDir.FullName}");
         return;
@@ -207,7 +206,10 @@ studioCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
         }
     }
 
-    await LoadNpcsFromAsync(configDir);
+    if (configDir != null)
+    {
+        await LoadNpcsFromAsync(configDir);
+    }
 
     // The landing page's 3 WebGL demo scenes (StudioWeb/demos/*.html) call /ask against
     // this same server, so their NPCs (StudioWeb/demo-npcs/*.yaml -- single-npc/city's

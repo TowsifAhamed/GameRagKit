@@ -16,3 +16,12 @@ providers:
     provider: openai
     chat_model: "<your chat model id>"
     embed_model: "<your embedding model id>"
+
+  # Kokoro voice, used only when the deploy sets TTS_ENDPOINT to a Kokoro (or other
+  # OpenAI-compatible speech) server; without it the demo falls back to browser voices.
+  voice:
+    text_to_speech:
+      # see docs/scenes.md#giving-an-npc-its-own-voice
+      engine: openai_speech
+      voice: am_echo
+      speed: 1.05

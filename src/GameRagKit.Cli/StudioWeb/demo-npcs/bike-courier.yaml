@@ -17,3 +17,15 @@ providers:
     chat_model: llama3.2:3b-instruct-q4_K_M
     embed_model: nomic-embed-text
     endpoint: http://127.0.0.1:11434
+
+  # Local voice I/O (scripts/setup-local-voice.sh). The STT model's bare file name
+  # resolves via GAMERAG_VOICE_DIR; without it the NPC can't listen, only type.
+  voice:
+    speech_to_text:
+      engine: whisper_cpp
+      model_path: ggml-base.en.bin
+    text_to_speech:
+      # Kokoro voice; TTS_ENDPOINT says where the Kokoro server is (run-voice-scene.sh sets it).
+      engine: openai_speech
+      voice: am_puck
+      speed: 1.1

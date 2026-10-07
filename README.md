@@ -118,9 +118,12 @@ See the [complete configuration guide](examples/configs/README.md) for model det
 
 ## GameRagKit in Action
 
-**[Try the WebGL demo live](https://gameragkit.up.railway.app/)** - three real Three.js
+**[Try the WebGL demo live](https://gameragkit.up.railway.app/)** - four real Three.js
 game scenes with GameRagKit NPCs you can walk up to and talk to in the browser, no setup
-required. See [samples/webgl-demo](samples/webgl-demo/) for the source.
+required: type, or hold <kbd>V</kbd> and speak, and NPCs answer out loud with gestures.
+The Tavern Table scene is a three-NPC group conversation where the characters reply to
+each other too ([docs/scenes.md](docs/scenes.md)). See [samples/webgl-demo](samples/webgl-demo/)
+for the source.
 
 | | |
 |---|---|
@@ -357,7 +360,7 @@ Routing rules combine config defaults with per-question overrides:
 | `gamerag chat --npc <file> [--question <text>]` | Quick smoke test for designers/writers. |
 | `gamerag serve --config <dir> [--port <n>]` | Launch a tiny HTTP service (`POST /ask`). |
 | `gamerag pack <dir> [--output <file>]` | Produce a deployable bundle (configs + lore + `.gamerag` indexes). |
-| `gamerag studio --config <dir> [--port <n>]` | Launch a local web UI for editing personas and testing chat — see [docs/studio.md](docs/studio.md). |
+| `gamerag studio [--config <dir>] [--port <n>]` | Launch a local web UI for editing personas and testing chat — see [docs/studio.md](docs/studio.md). |
 
 ## Documentation & Examples
 
@@ -374,6 +377,8 @@ Routing rules combine config defaults with per-question overrides:
 - **[samples/unity/](samples/unity/)**, **[samples/unreal/](samples/unreal/)** - Legacy loose-script samples, kept for reference
 
 ### Documentation
+- **[docs/scenes.md](docs/scenes.md)** - Multi-character voice conversations: intent routing, NPC-to-NPC replies, per-NPC local voices (whisper.cpp + Piper)
+- **[docs/voice.md](docs/voice.md)** - Single-NPC speech-to-text / text-to-speech (`/ask/voice`)
 - **[docs/deploy-cloud-run.md](docs/deploy-cloud-run.md)** - Deploy your own free instance (Google Cloud Run + Neon Postgres, $0 within free tier limits)
 - **[docs/2025-11-29/](docs/2025-11-29/)** - Latest updates and issue reports
   - [PROVIDER_COMPATIBILITY.md](docs/2025-11-29/PROVIDER_COMPATIBILITY.md) - Which cloud providers are supported?

@@ -313,3 +313,149 @@ body.dialogue-open #support-banner {
   font-size: 11px;
   color: var(--text-dim);
 }
+
+/* ---- Multi-character voice scene (tavern.html / scene-controller.js) ---- */
+
+.scene-panel #dialogue-log {
+  gap: 8px;
+}
+
+.dialogue-line .speaker {
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.dialogue-line .speaker::after {
+  content: ":";
+}
+
+.dialogue-line.npc {
+  padding-left: 8px;
+  border-left: 2px solid transparent;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.dialogue-line.npc.speaking {
+  border-left-color: var(--accent);
+  background: rgba(110, 168, 254, 0.07);
+}
+
+.dialogue-line.npc.reaction {
+  margin-left: 14px;
+}
+
+.dialogue-line.action {
+  color: var(--accent);
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.mood-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+#scene-status {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: -4px 0 10px;
+  min-height: 1em;
+}
+
+#scene-status[hidden] { display: none; }
+
+/* #dialogue-form prefix: outranks the generic "#dialogue-form button" (Send) styling. */
+#dialogue-form #mic-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#dialogue-form #mic-button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+#dialogue-form #mic-button:hover {
+  border-color: var(--accent);
+}
+
+#dialogue-form #mic-button[hidden] { display: none; }
+
+#dialogue-form #mic-button.recording {
+  background: #e5735a;
+  border-color: #e5735a;
+  color: #0f1115;
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  50% { box-shadow: 0 0 0 6px rgba(229, 115, 90, 0.25); }
+}
+
+#dialogue-hint.voice-hint,
+.scene-panel #dialogue-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+#dialogue-hint.voice-hint kbd,
+.scene-panel #dialogue-hint kbd {
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.voice-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+#scene-routing {
+  margin-left: auto;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+/* Wide screens: dock the group conversation to the right so the NPCs it's about -- and
+   their gestures -- stay visible in the middle of the scene instead of under the panel. */
+@media (min-width: 900px) and (min-height: 481px) {
+  #dialogue-panel.scene-panel {
+    left: auto;
+    right: 20px;
+    bottom: 20px;
+    transform: none;
+    width: min(400px, 34vw);
+    max-height: min(520px, 75vh);
+    animation: scene-panel-in 0.15s ease-out;
+  }
+
+  .scene-panel #dialogue-log {
+    max-height: none;
+    flex: 1;
+  }
+}
+
+@keyframes scene-panel-in {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}

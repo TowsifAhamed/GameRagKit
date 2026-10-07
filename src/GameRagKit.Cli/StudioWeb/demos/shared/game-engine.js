@@ -214,6 +214,10 @@
     // clip in the file if nothing matches so a model with unfamiliar clip names still
     // animates with *something* rather than staying in its static bind pose.
     function pickDefaultClip(clips) {
+      // Exact "Idle" first: KayKit packs sort "2H_Melee_Idle" (a two-handed combat stance)
+      // ahead of the relaxed "Idle", and a plain /idle/ match used to pick the stance.
+      const exact = clips.find((c) => /^(unarmed_)?idle$/i.test(c.name));
+      if (exact) return exact;
       const idle = clips.find((c) => /idle/i.test(c.name));
       if (idle) return idle;
       const walk = clips.find((c) => /walk/i.test(c.name));
@@ -226,7 +230,7 @@
     // placeholder capsule+sphere once it finishes loading; until then (or if loading
     // fails, or no model/loader is present at all), the placeholder mesh is shown so the
     // scene is never left with a missing NPC.
-    function loadNpcModel(group, config, bodyHeight) {
+    function loadNpcModel(group, config, bodyHeight, npc) {
       if (!config.model || typeof THREE.GLTFLoader !== "function") {
         return;
       }
@@ -267,8 +271,21 @@
           if (gltf.animations && gltf.animations.length > 0) {
             const mixer = new THREE.AnimationMixer(modelScene);
             const clip = pickDefaultClip(gltf.animations);
-            mixer.clipAction(clip).play();
+            const idleAction = mixer.clipAction(clip);
+            idleAction.play();
             activeMixers.push(mixer);
+
+            // Kept on the npc so scene code can layer one-shot gestures (playGesture) and
+            // procedural head motion (onFrame) over the idle loop.
+            if (npc) {
+              npc.mixer = mixer;
+              npc.idleAction = idleAction;
+              npc.clips = new Map(gltf.animations.map((c) => [c.name, c]));
+              npc.headBone = null;
+              modelScene.traverse((node) => {
+                if (!npc.headBone && node.isBone && /^head$/i.test(node.name)) npc.headBone = node;
+              });
+            }
           }
         },
         undefined,
@@ -284,7 +301,6 @@
 
       const bodyHeight = 1.7;
       addPlaceholderNpcMesh(group, config, bodyHeight);
-      loadNpcModel(group, config, bodyHeight);
 
       const label = makeLabelSprite(config.label || config.npcId);
       label.position.y = bodyHeight + 0.7;
@@ -296,11 +312,60 @@
         npcId: config.npcId,
         label: config.label || config.npcId,
         greeting: config.greeting || "Hello.",
+        // Optional hints for the voice layer (voice-io.js): "male"/"female" for picking a
+        // browser fallback voice, and a gesture clip for exclamations.
+        voiceGender: config.voiceGender,
+        signatureGesture: config.signatureGesture,
         group,
         inRange: false
       };
       npcs.push(npc);
+      loadNpcModel(group, config, bodyHeight, npc);
       return npc;
+    }
+
+    // One-shot gesture (e.g. "Interact", "Cheer", "Spellcast_Raise") blended over the NPC's
+    // idle loop, easing back into idle just before the clip ends. Returns false if the model
+    // hasn't loaded yet or has no clip by that name, so callers can simply skip the gesture.
+    const GESTURE_FADE = 0.3;
+    function playGesture(npc, clipName, options) {
+      const opts = options || {};
+      if (!npc || !npc.mixer || !npc.clips) return false;
+      const clip = npc.clips.get(clipName);
+      if (!clip) return false;
+
+      const action = npc.mixer.clipAction(clip);
+      const from = npc.gestureAction && npc.gestureAction !== action ? npc.gestureAction : npc.idleAction;
+      action.reset();
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.timeScale = opts.timeScale || 1;
+      action.setEffectiveWeight(opts.weight !== undefined ? opts.weight : 1);
+      action.play();
+      action.crossFadeFrom(from, GESTURE_FADE, false);
+      npc.gestureAction = action;
+      return true;
+    }
+
+    function updateGestures() {
+      for (const npc of npcs) {
+        const action = npc.gestureAction;
+        if (!action) continue;
+        const remaining = (action.getClip().duration - action.time) / Math.max(0.01, action.timeScale);
+        if (remaining <= GESTURE_FADE) {
+          npc.idleAction.reset();
+          npc.idleAction.play();
+          npc.idleAction.crossFadeFrom(action, GESTURE_FADE, false);
+          npc.gestureAction = null;
+        }
+      }
+    }
+
+    // Per-frame hooks, run after animation mixers update and before rendering -- the place
+    // to layer procedural motion (head turns, talking nods) on top of baked clips.
+    const frameCallbacks = [];
+    function onFrame(callback) {
+      frameCallbacks.push(callback);
     }
 
     function addBuilding(config) {
@@ -1422,6 +1487,7 @@
       for (let i = 0; i < activeMixers.length; i++) {
         activeMixers[i].update(dt);
       }
+      updateGestures();
 
       // Movement, jumping, and look-direction changes are all suspended while a
       // conversation is open -- WASD/Space would otherwise both move the player and type
@@ -1542,6 +1608,10 @@
         updateCrowd(dt);
       }
 
+      for (let i = 0; i < frameCallbacks.length; i++) {
+        frameCallbacks[i](dt);
+      }
+
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
@@ -1559,6 +1629,8 @@
       addPointLight,
       onProximityChange,
       setDialogueOpen,
+      playGesture,
+      onFrame,
       getClosestNpc: () => closestNpcInRange,
       // transcript must be forwarded here -- askNpc() folds it into options.systemOverride
       // so an archetype NPC stays consistent (e.g. keeps the same self-given name) across

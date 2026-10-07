@@ -30,3 +30,15 @@ providers:
     embed_model: nomic-embed-text
     endpoint: http://127.0.0.1:11434
 
+  # Local voice I/O (scripts/setup-local-voice.sh). The STT model's bare file name
+  # resolves via GAMERAG_VOICE_DIR; without it the NPC can't listen, only type.
+  voice:
+    speech_to_text:
+      engine: whisper_cpp
+      model_path: ggml-base.en.bin
+    # Kokoro-82M via scripts/kokoro_server.py (natural-sounding, local). For the older
+    # Piper CLI engine instead: engine: piper + voice_model_path: <voice>.onnx
+    text_to_speech:
+      engine: openai_speech
+      voice: am_michael
+      speed: 1.0
