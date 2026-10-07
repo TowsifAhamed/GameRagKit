@@ -352,16 +352,19 @@
     }
 
     // ---------- Body language ----------
-    // Additive head motion on top of each model's idle/gesture pose, driven by how loud the
-    // NPC's speech is right now: a stand-in for lip-sync, since these models have no mouth
-    // blend shapes. The mixer rewrites the head bone every frame, so offsets never pile up.
-    const motion = new Map(); // npc -> { source: AnalyserNode | "synthetic" | null, thinking, level, talk, think }
+    // A small head nod/tilt on top of each model's idle/gesture pose, driven by how loud
+    // the NPC's speech is right now: a stand-in for lip-sync, since these models have no
+    // mouth blend shapes. The offset is a stored quaternion that's removed before the
+    // mixer runs and re-applied after it, so it can never pile up on the bone.
+    const motion = new Map(); // npc -> { source, thinking, level, talk, think, offset }
     const levelBuffer = new Uint8Array(512);
+    const euler = new THREE.Euler();
+    const inverse = new THREE.Quaternion();
 
     function stateFor(npc) {
       let state = motion.get(npc);
       if (!state) {
-        state = { source: null, thinking: false, level: 0, talk: 0, think: 0 };
+        state = { source: null, thinking: false, level: 0, talk: 0, think: 0, offset: null };
         motion.set(npc, state);
       }
       return state;
@@ -381,7 +384,8 @@
     }
 
     function levelOf(state, t) {
-      if (state.source === "synthetic") return 0.45 + 0.35 * Math.sin(t * 11) * Math.sin(t * 3.7);
+      // Browser speech exposes no audio stream: a gentle syllable-ish rhythm instead.
+      if (state.source === "synthetic") return 0.4 + 0.2 * Math.sin(t * 5.3) * Math.sin(t * 1.7);
       if (!state.source) return 0;
       state.source.getByteTimeDomainData(levelBuffer);
       let sum = 0;
@@ -392,21 +396,40 @@
       return Math.min(1, Math.sqrt(sum / levelBuffer.length) * 4);
     }
 
+    game.onBeforeAnimate(() => {
+      for (const [npc, state] of motion) {
+        if (state.offset && npc.headBone) {
+          npc.headBone.quaternion.multiply(inverse.copy(state.offset).invert());
+          state.offset = null;
+        }
+      }
+    });
+
+    const MAX_HEAD_ANGLE = 0.14; // radians (~8 degrees): a nod, not a headbang
+
     game.onFrame((dt) => {
       const t = performance.now() / 1000;
-      const ease = 1 - Math.exp(-dt * 5);
+      const ease = 1 - Math.exp(-dt * 4);
       for (const [npc, state] of motion) {
-        state.level += (levelOf(state, t) - state.level) * Math.min(1, dt * 18);
+        // Slow attack/decay so the head follows phrases, not every syllable.
+        state.level += (levelOf(state, t) - state.level) * Math.min(1, dt * 6);
         state.talk += ((state.source ? 1 : 0) - state.talk) * ease;
         state.think += ((state.thinking ? 1 : 0) - state.think) * ease;
+
         const head = npc.headBone;
         if (head) {
           const l = state.level * state.talk;
-          head.rotation.x += l * 0.22 + Math.sin(t * 6.5) * 0.05 * l - state.think * 0.12;
-          head.rotation.y += Math.sin(t * 1.9) * 0.1 * state.talk;
-          head.rotation.z += Math.sin(t * 2.6) * 0.06 * l + state.think * 0.18;
+          const clamp = (a) => Math.max(-MAX_HEAD_ANGLE, Math.min(MAX_HEAD_ANGLE, a));
+          euler.set(
+            clamp(l * 0.07 + Math.sin(t * 3.1) * 0.025 * l - state.think * 0.05),
+            clamp(Math.sin(t * 0.9) * 0.04 * state.talk),
+            clamp(Math.sin(t * 1.3) * 0.02 * state.talk + state.think * 0.07)
+          );
+          const offset = new THREE.Quaternion().setFromEuler(euler);
+          head.quaternion.multiply(offset);
+          state.offset = offset;
         }
-        npc.group.scale.set(1, 1 + state.level * state.talk * 0.015, 1);
+        npc.group.scale.set(1, 1 + state.level * state.talk * 0.01, 1);
       }
       updateListener();
     });

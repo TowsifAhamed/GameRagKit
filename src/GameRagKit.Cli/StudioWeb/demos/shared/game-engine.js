@@ -368,6 +368,14 @@
       frameCallbacks.push(callback);
     }
 
+    // Run before the mixers update. A mixer only writes a bone when the clip's value
+    // changed since its last write, so a procedural offset left on a bone would otherwise
+    // stack frame after frame; undo such offsets here, re-apply them in onFrame.
+    const beforeAnimateCallbacks = [];
+    function onBeforeAnimate(callback) {
+      beforeAnimateCallbacks.push(callback);
+    }
+
     function addBuilding(config) {
       const width = config.width || 6;
       const depth = config.depth || 6;
@@ -1484,6 +1492,9 @@
       // separately-computed delta. activeMixers stays empty for a scene with no animated
       // models at all (e.g. a model with no baked clips, or before any model has finished
       // loading yet), so this loop is simply a no-op rather than something to special-case.
+      for (let i = 0; i < beforeAnimateCallbacks.length; i++) {
+        beforeAnimateCallbacks[i](dt);
+      }
       for (let i = 0; i < activeMixers.length; i++) {
         activeMixers[i].update(dt);
       }
@@ -1631,6 +1642,7 @@
       setDialogueOpen,
       playGesture,
       onFrame,
+      onBeforeAnimate,
       getClosestNpc: () => closestNpcInRange,
       // transcript must be forwarded here -- askNpc() folds it into options.systemOverride
       // so an archetype NPC stays consistent (e.g. keeps the same self-given name) across
