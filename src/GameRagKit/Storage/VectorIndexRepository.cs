@@ -8,7 +8,10 @@ namespace GameRagKit.Storage;
 public sealed class VectorIndexRepository
 {
     private readonly string _root;
-    private readonly ConcurrentDictionary<IndexScopeKey, SemaphoreSlim> _locks = new();
+    // Keyed by file path and shared across instances: every NPC has its own repository, but
+    // NPCs that share world/region lore read and write the same index files, and NPCs may
+    // be indexed concurrently at startup.
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> PathLocks = new(StringComparer.Ordinal);
 
     public VectorIndexRepository(string root)
     {
@@ -18,15 +21,24 @@ public sealed class VectorIndexRepository
     public async Task<VectorIndex> LoadIndexAsync(IndexScopeKey scope, CancellationToken cancellationToken)
     {
         var path = GetIndexPath(scope);
-        if (!File.Exists(path))
+        var semaphore = LockFor(path);
+        await semaphore.WaitAsync(cancellationToken);
+        try
         {
-            return new VectorIndex();
-        }
+            if (!File.Exists(path))
+            {
+                return new VectorIndex();
+            }
 
-        using var stream = File.OpenRead(path);
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        var json = await reader.ReadToEndAsync(cancellationToken);
-        return VectorIndex.FromJson(json);
+            using var stream = File.OpenRead(path);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            var json = await reader.ReadToEndAsync(cancellationToken);
+            return VectorIndex.FromJson(json);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     public async Task SaveIndexAsync(IndexScopeKey scope, VectorIndex index, CancellationToken cancellationToken)
@@ -34,7 +46,7 @@ public sealed class VectorIndexRepository
         var path = GetIndexPath(scope);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var json = index.ToJson();
-        var semaphore = _locks.GetOrAdd(scope, _ => new SemaphoreSlim(1, 1));
+        var semaphore = LockFor(path);
 
         await semaphore.WaitAsync(cancellationToken);
         try
@@ -76,6 +88,8 @@ public sealed class VectorIndexRepository
         var hash = sha.ComputeHash(bytes);
         return Convert.ToHexString(hash);
     }
+
+    private static SemaphoreSlim LockFor(string path) => PathLocks.GetOrAdd(Path.GetFullPath(path), _ => new SemaphoreSlim(1, 1));
 
     private string GetIndexPath(IndexScopeKey scope)
     {

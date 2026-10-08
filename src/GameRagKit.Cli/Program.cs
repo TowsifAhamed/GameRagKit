@@ -193,13 +193,43 @@ studioCommand.SetHandler(async (DirectoryInfo? configDir, int port) =>
     var registryEntries = new List<KeyValuePair<string, NpcAgent>>();
     var catalogEntries = new List<StudioNpcEntry>();
 
+    // Startup time matters on scale-to-zero hosts (Cloud Run starts a fresh container on the
+    // first request after idling), so NPCs are indexed a few at a time instead of one by one,
+    // and a persona already loaded from --config isn't loaded again from the bundled demo NPCs
+    // (the hosted image ships the same files in both places).
+    var loadedPersonas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     async Task LoadNpcsFromAsync(DirectoryInfo directory)
     {
-        foreach (var file in directory.EnumerateFiles("*.yaml", SearchOption.AllDirectories))
+        var agents = new List<(FileInfo File, NpcAgent Agent)>();
+        foreach (var file in directory.EnumerateFiles("*.yaml", SearchOption.AllDirectories).OrderBy(f => f.FullName, StringComparer.Ordinal))
         {
             var agent = await GameRAGKit.Load(file.FullName);
+            if (!loadedPersonas.Add(agent.PersonaId))
+            {
+                await agent.DisposeAsync();
+                continue;
+            }
+
             agent.UseEnv();
-            await agent.EnsureIndexAsync();
+            agents.Add((file, agent));
+        }
+
+        using var gate = new SemaphoreSlim(4);
+        await Task.WhenAll(agents.Select(async entry =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                await entry.Agent.EnsureIndexAsync();
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }));
+
+        foreach (var (file, agent) in agents)
+        {
             registryEntries.Add(new KeyValuePair<string, NpcAgent>(agent.PersonaId, agent));
             registryEntries.Add(new KeyValuePair<string, NpcAgent>(Path.GetFileNameWithoutExtension(file.Name), agent));
             catalogEntries.Add(new StudioNpcEntry(agent.PersonaId, file.FullName));
