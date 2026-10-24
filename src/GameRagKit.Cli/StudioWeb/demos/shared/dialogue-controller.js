@@ -211,6 +211,7 @@
           audio,
           settings,
           signal: controller.signal,
+          onSlow: () => setStatus("Waking up the NPCs… the free server sleeps when nobody is around, this can take up to a minute."),
           onEvent: (event) => {
             if (event.type === "transcript") {
               addLine("player", event.text);

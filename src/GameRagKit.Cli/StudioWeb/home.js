@@ -3,7 +3,7 @@
 
   const npcCountEl = document.getElementById("npc-count");
 
-  fetch("/studio/api/npcs")
+  fetch(`${window.GAMERAG_SERVER_URL || ""}/studio/api/npcs`)
     .then((response) => (response.ok ? response.json() : null))
     .then((npcs) => {
       if (Array.isArray(npcs) && npcCountEl) {

@@ -19,8 +19,10 @@
 
   // ---- API -------------------------------------------------------------
 
+  const SERVER_URL = window.GAMERAG_SERVER_URL || "";
+
   async function fetchJson(url, options) {
-    const response = await fetch(url, options);
+    const response = await fetch(SERVER_URL + url, options);
     const body = await response.json().catch(() => null);
     if (!response.ok) {
       const message = (body && body.error) || `Request failed (${response.status})`;

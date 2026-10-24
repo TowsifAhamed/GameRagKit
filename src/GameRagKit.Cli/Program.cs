@@ -127,24 +127,7 @@ serveCommand.SetHandler(async (DirectoryInfo configDir, int port) =>
         options.ListenAnyIP(port);
     });
 
-    var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS");
-    builder.Services.AddCors(options =>
-    {
-        if (!string.IsNullOrWhiteSpace(corsOrigins))
-        {
-            options.AddDefaultPolicy(policy =>
-            {
-                policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
-        }
-        else
-        {
-            options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-        }
-    });
+    AddGameRagCors(builder.Services);
 
     var authOptions = ApiAuthOptions.FromEnvironment();
 
@@ -261,6 +244,10 @@ studioCommand.SetHandler(async (DirectoryInfo? configDir, int port) =>
         options.ListenAnyIP(port);
     });
 
+    // The demo pages may be served from a different origin than this server (e.g. static
+    // files on Cloudflare Pages calling a server on Render), so Studio allows CORS like serve.
+    AddGameRagCors(builder.Services);
+
     var authOptions = ApiAuthOptions.FromEnvironment();
 
     builder.Services.AddSingleton(registry);
@@ -315,12 +302,37 @@ studioCommand.SetHandler(async (DirectoryInfo? configDir, int port) =>
         Console.Error.WriteLine($"Warning: studio web assets not found at {webRoot}; only the API will be available.");
     }
 
+    app.UseCors();
     app.UseMiddleware<ApiAuthenticationMiddleware>();
     app.MapControllers();
 
     Console.WriteLine($"GameRagKit Studio running at http://localhost:{port}");
     await app.RunAsync();
 }, studioConfigOption, studioPortOption);
+
+// CORS_ORIGINS (comma-separated) restricts which sites may call the API from a browser;
+// unset, any origin may (the API has its own key-based auth via SERVICE_API_KEY).
+static void AddGameRagCors(IServiceCollection services)
+{
+    var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS");
+    services.AddCors(options =>
+    {
+        if (!string.IsNullOrWhiteSpace(corsOrigins))
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.WithOrigins(corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        }
+        else
+        {
+            options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+        }
+    });
+}
 
 root.AddCommand(ingestCommand);
 root.AddCommand(chatCommand);

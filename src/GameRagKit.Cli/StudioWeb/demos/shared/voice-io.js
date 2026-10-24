@@ -171,7 +171,18 @@
     }
 
     // ---------- Server conversation (SSE over fetch) ----------
-    async function streamScene({ participants, message, audio, settings, signal, onEvent }) {
+    // onSlow fires once if the server hasn't answered within a few seconds -- on a free
+    // tier that sleeps when idle, the first request after a quiet spell waits for it to wake.
+    async function streamScene({ participants, message, audio, settings, signal, onEvent, onSlow }) {
+      const slowTimer = onSlow ? setTimeout(onSlow, 4000) : null;
+      try {
+        return await streamSceneInner({ participants, message, audio, settings, signal, onEvent, slowTimer });
+      } finally {
+        clearTimeout(slowTimer);
+      }
+    }
+
+    async function streamSceneInner({ participants, message, audio, settings, signal, onEvent, slowTimer }) {
       let response;
       if (audio) {
         const body = new FormData();
@@ -188,6 +199,7 @@
         });
       }
 
+      clearTimeout(slowTimer);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `Request failed (${response.status})`);
