@@ -1,0 +1,6 @@
+# Cloudflare Pages headers. Cross-origin isolation lets the in-browser Kokoro voices
+# (demos/shared/kokoro-browser.js) use multi-threaded WebAssembly -- about 2x faster than
+# single-threaded. "credentialless" keeps the CDN scripts, models and API calls working.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: credentialless

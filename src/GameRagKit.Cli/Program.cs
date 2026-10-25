@@ -294,6 +294,10 @@ studioCommand.SetHandler(async (DirectoryInfo? configDir, int port) =>
             OnPrepareResponse = ctx =>
             {
                 ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+                // Cross-origin isolation: lets the in-browser Kokoro voices use multi-threaded
+                // WebAssembly (~2x faster). Same headers as StudioWeb/_headers for static hosts.
+                ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+                ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"] = "credentialless";
             }
         });
     }

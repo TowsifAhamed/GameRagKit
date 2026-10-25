@@ -178,7 +178,8 @@
         if (b.done) setStatus("");
         return;
       }
-      if (b.withVoice && !b.clips.has(b.next)) return; // wait for this turn's clip
+      const nextClip = b.clips.get(b.next);
+      if (b.withVoice && (!nextClip || nextClip.pending)) return; // wait for this turn's clip
 
       b.playing = true;
       const clip = b.clips.get(b.next);
@@ -199,6 +200,9 @@
           voice.setSpeaking(member.npc, null);
         } else if (clip && clip.wav) {
           await voice.playWav(clip.wav, { position: member.npc.group.position, npc: member.npc, text: turn.text });
+        } else if (clip && clip.local) {
+          const ok = await voice.playLocal(clip.local, { position: member.npc.group.position, npc: member.npc });
+          if (!ok && !b.cancelled) await voice.speakBrowser(turn.text, members.indexOf(member), member.npc);
         } else {
           await voice.speakBrowser(turn.text, members.indexOf(member), member.npc);
         }
@@ -274,6 +278,7 @@
       caps = await voice.capabilities(members.map((m) => m.npc.npcId));
       micBtn.hidden = !caps.canListen;
       el("mic-hint").hidden = micBtn.hidden;
+      voice.prepareLocalVoices(caps, (text) => { if (!beat || beat.done) setStatus(text); });
     }
 
     function openScene() {
@@ -455,12 +460,26 @@
           }
           b.turns.set(event.index, { npc: event.npc, text: event.text, lineEl, extraEls, mood: event.mood && event.mood.value, actions: event.actions });
           if (rings.get(event.npc).state === "thinking") setNpcState(event.npc, "idle");
-          if (b.withVoice && !serverVoices) b.clips.set(event.index, { wav: null });
+          if (b.withVoice && !caps.serverTts.has(event.npc)) {
+            // No server voice for this NPC: Kokoro in the browser if it's loaded (started now,
+            // so it overlaps the previous line's playback), else the browser's own voice.
+            const local = voice.synthesizeLocal(caps, event.npc, event.text);
+            if (local) {
+              // Playable once its first sentence is ready; the rest is generated meanwhile.
+              b.clips.set(event.index, { pending: true });
+              local.ready.then(() => b.clips.set(event.index, { local }))
+                .catch(() => b.clips.set(event.index, { wav: null }))
+                .finally(() => pump(b));
+            } else {
+              b.clips.set(event.index, { wav: null });
+            }
+          }
           pump(b);
           break;
         }
         case "audio":
-          b.clips.set(event.index, { wav: event.wavBase64 });
+          // A server "no voice" placeholder mustn't replace a clip Kokoro is making locally.
+          if (event.wavBase64 || !b.clips.has(event.index)) b.clips.set(event.index, { wav: event.wavBase64 });
           pump(b);
           break;
         case "error":

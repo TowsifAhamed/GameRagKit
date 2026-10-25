@@ -35,7 +35,7 @@ public sealed class SceneController : ControllerBase
         {
             if (_registry.TryGetAgent(npc, out var agent))
             {
-                result[npc] = new { speechToText = agent.HasSpeechToText, textToSpeech = agent.HasTextToSpeech };
+                result[npc] = new { speechToText = agent.HasSpeechToText, textToSpeech = agent.HasTextToSpeech, voice = agent.VoiceName, speed = agent.VoiceSpeed };
             }
         }
 

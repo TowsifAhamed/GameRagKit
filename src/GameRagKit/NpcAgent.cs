@@ -123,6 +123,15 @@ public sealed class NpcAgent : IAsyncDisposable
         ? !string.IsNullOrWhiteSpace(tts.Voice) && !string.IsNullOrWhiteSpace(_runtimeOptions.TtsEndpoint ?? tts.Endpoint)
         : File.Exists(_runtimeOptions.TtsVoiceModelPath ?? _config.Providers.Voice?.TextToSpeech?.VoiceModelPath);
 
+    /// <summary>
+    /// The persona's Kokoro/OpenAI-speech voice id and speed from its YAML, even when this server
+    /// has no speech server to use them -- so a client can voice the NPC itself (e.g. Kokoro
+    /// running in the browser) with the same casting.
+    /// </summary>
+    public string? VoiceName => _config.Providers.Voice?.TextToSpeech is { } tts && OpenAiSpeechClient.IsEngine(tts.Engine) ? tts.Voice : null;
+
+    public double? VoiceSpeed => _config.Providers.Voice?.TextToSpeech?.Speed;
+
     /// <summary>The persona's system prompt, used to describe this NPC to a scene's intent router.</summary>
     public string PersonaPrompt => _resolvedPersona.SystemPrompt;
 

@@ -75,6 +75,7 @@
       micBtn.hidden = !caps.canListen;
       if (micHint) micHint.hidden = micBtn.hidden;
       if (voiceMode) voiceMode.textContent = caps.serverTts.has(npc.npcId) ? "server voice" : "browser voice";
+      voice.prepareLocalVoices(caps, (text) => { if (!currentRequest) setStatus(text); });
     }
 
     function openDialogue(npc) {
@@ -146,7 +147,7 @@
 
     // Speaks a line: the server clip when there is one, else the browser voice. Actors
     // (addNpc NPCs with a model) gesture and move their head while talking.
-    async function speak(npc, text, wavBase64, meta, lineEl, entry) {
+    async function speak(npc, text, wavBase64, meta, lineEl, entry, localClip) {
       const actor = npc.group ? npc : null;
       speaking = { entry, lineEl };
       if (actor) {
@@ -156,6 +157,10 @@
       try {
         if (wavBase64) {
           await voice.playWav(wavBase64, { position: actor ? actor.group.position : null, npc: actor, text });
+        } else if (localClip) {
+          // Kokoro in the browser, sentence by sentence; stops on its own if the player cuts in.
+          const ok = await voice.playLocal(localClip, { position: actor ? actor.group.position : null, npc: actor });
+          if (!ok && speaking && speaking.entry === entry) await voice.speakBrowser(text, GameRagDemo.voiceIndexFor(npc.npcId), actor);
         } else {
           await voice.speakBrowser(text, GameRagDemo.voiceIndexFor(npc.npcId), actor);
         }
@@ -204,6 +209,7 @@
 
       let reply = null;
       let clip;
+      let localClip = null;
       try {
         await voice.streamScene({
           participants: [{ npc: npc.npcId, name: GameRagDemo.shortName(npc.label) }],
@@ -222,6 +228,8 @@
             } else if (event.type === "turn") {
               voice.setThinking(npc, false);
               reply = { text: event.text, mood: event.mood && event.mood.value, actions: event.actions };
+              // No server voice: start Kokoro in the browser now (null if it isn't loaded).
+              if (withVoice && !caps.serverTts.has(npc.npcId)) localClip = voice.synthesizeLocal(caps, npc.npcId, event.text);
               // Voice mode: shown and remembered when spoken (see below), like subtitles.
               if (!withVoice) {
                 addLine("npc", event.text);
@@ -250,7 +258,7 @@
         const entry = { role: "npc", text: reply.text };
         transcript.push(entry);
         const lineEl = addLine("npc", reply.text);
-        await speak(npc, reply.text, clip, reply, lineEl, entry);
+        await speak(npc, reply.text, clip, reply, lineEl, entry, localClip);
       } else if (npc.group) {
         const gesture = voice.chooseGesture(reply, npc.signatureGesture);
         if (gesture) game.playGesture(npc, gesture);

@@ -42,13 +42,77 @@
         // Older server without /scene: treat as no server speech.
       }
       const serverStt = canRecord && entries.some(([, c]) => c.speechToText);
+      // NPCs the server can't voice but whose YAML names a Kokoro voice: those can be voiced
+      // by Kokoro running in this browser (kokoro-browser.js), with the same casting.
+      const kokoro = global.GameRagDemo && global.GameRagDemo.browserKokoro;
+      const localVoices = new Map(entries
+        .filter(([, c]) => !c.textToSpeech && c.voice)
+        .map(([id, c]) => [id, { voice: c.voice, speed: c.speed || 1 }]));
       return {
         serverStt,
         browserStt: !serverStt && !!BrowserRecognition,
         canListen: serverStt || !!BrowserRecognition,
         serverTts: new Set(entries.filter(([, c]) => c.textToSpeech).map(([id]) => id)),
+        localVoices: kokoro && kokoro.supported() ? localVoices : new Map(),
         browserTts: !!global.speechSynthesis
       };
+    }
+
+    // ---------- Kokoro in the browser ----------
+    // Starts loading the in-browser Kokoro model if any NPC needs it. onStatus gets short
+    // progress text the first time (the model is cached after that).
+    function prepareLocalVoices(caps, onStatus) {
+      const kokoro = global.GameRagDemo.browserKokoro;
+      if (!caps.localVoices || caps.localVoices.size === 0 || kokoro.isReady()) return;
+      let shown = -1;
+      kokoro.load((fraction) => {
+        const pct = Math.floor(fraction * 100);
+        if (pct === shown || pct >= 100) return;
+        shown = pct;
+        if (onStatus && pct % 5 === 0) onStatus(`Loading NPC voices… ${pct}% (first visit only)`);
+      }).then(() => { if (onStatus && shown >= 0) onStatus(""); });
+    }
+
+    // A Kokoro clip for this NPC's line, or null to use the browser's own voice (Kokoro not
+    // loaded yet, not supported, or this NPC has no Kokoro voice).
+    //
+    // In-browser Kokoro runs at roughly real time, so a line is split into its first
+    // sentence and the rest: the first is ready (and starts playing) quickly while the rest
+    // is generated behind it. Returns { text, chunks: [{ text, offset, job }], ready }, where
+    // ready resolves when the first chunk can play.
+    function synthesizeLocal(caps, npcId, text) {
+      const kokoro = global.GameRagDemo.browserKokoro;
+      const cast = caps.localVoices && caps.localVoices.get(npcId);
+      if (!cast || !kokoro.isReady() || !text) return null;
+      const match = /^(.*?[.!?])\s+(\S.*)$/s.exec(text);
+      const parts = match && match[2].length > 12 ? [match[1], match[2]] : [text];
+      let offset = 0;
+      const chunks = parts.map((part) => {
+        const start = text.indexOf(part, offset);
+        offset = start + part.length;
+        return { text: part, offset: start, job: kokoro.synthesize(part, cast.voice, cast.speed) };
+      });
+      chunks.forEach((c) => c.job.catch(() => {})); // failures are handled where they're awaited
+      return { text, chunks, ready: chunks[0].job };
+    }
+
+    // Plays a synthesizeLocal() line chunk by chunk, positioned like a server clip. Interrupt
+    // bookkeeping covers the whole line: stopAll() reports how far into the full text it got.
+    async function playLocal(local, { position, npc } = {}) {
+      const generation = playGeneration;
+      for (const chunk of local.chunks) {
+        let clip;
+        try {
+          clip = await chunk.job;
+        } catch (err) {
+          console.warn("[voice] Kokoro chunk failed", err);
+          return false;
+        }
+        if (generation !== playGeneration) return true; // stopped while generating
+        await playSamples(clip.samples, clip.rate, { position, npc, text: local.text, textOffset: chunk.offset, textLength: chunk.text.length });
+        if (generation !== playGeneration) return true;
+      }
+      return true;
     }
 
     // ---------- Push-to-talk ----------
@@ -256,10 +320,22 @@
 
     // Plays a base64 WAV, positioned at `position` ({x, z}) if given. Resolves when done
     // or stopped. `npc` (an addNpc actor) gets talking motion driven by the audio level.
-    async function playWav(base64, { position, npc, text } = {}) {
+    async function playWav(base64, options = {}) {
       const ctx = ensureAudio();
       const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-      const buffer = await ctx.decodeAudioData(bytes.buffer);
+      return playBuffer(await ctx.decodeAudioData(bytes.buffer), options);
+    }
+
+    // Raw mono samples (e.g. from Kokoro in the browser), played exactly like a server clip.
+    function playSamples(samples, rate, options = {}) {
+      const ctx = ensureAudio();
+      const buffer = ctx.createBuffer(1, samples.length, rate);
+      buffer.copyToChannel(samples, 0);
+      return playBuffer(buffer, options);
+    }
+
+    async function playBuffer(buffer, { position, npc, text, textOffset = 0, textLength } = {}) {
+      const ctx = ensureAudio();
       const source = ctx.createBufferSource();
       source.buffer = buffer;
 
@@ -296,7 +372,9 @@
           source.start();
           const startedAt = ctx.currentTime;
           // Time-proportional estimate of how far into the text the voice has got.
-          playback.spokenChars = () => Math.round(playback.text.length * Math.min(1, (ctx.currentTime - startedAt) / buffer.duration));
+          // For one chunk of a longer line, the estimate covers just that chunk's span of the text.
+          const span = textLength !== undefined ? textLength : playback.text.length - textOffset;
+          playback.spokenChars = () => textOffset + Math.round(span * Math.min(1, (ctx.currentTime - startedAt) / buffer.duration));
           activePlayback = playback;
         });
       } finally {
@@ -380,7 +458,10 @@
 
     // Stops all NPC speech. Returns what the interrupted line got through, if a line was
     // mid-playback: { npc, text, said, unsaid } (said/unsaid split on a word boundary).
+    let playGeneration = 0;
+
     function stopAll() {
+      playGeneration++;
       const cut = activePlayback ? Object.assign({ npc: activePlayback.npc, text: activePlayback.text }, splitSpoken(activePlayback.text, activePlayback.spokenChars())) : null;
       activePlayback = null;
       for (const source of activeSources) {
@@ -498,6 +579,10 @@
       createPushToTalk,
       streamScene,
       playWav,
+      playSamples,
+      playLocal,
+      prepareLocalVoices,
+      synthesizeLocal,
       speakBrowser,
       stopAll,
       setSpeaking,
